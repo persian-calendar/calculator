@@ -78,7 +78,7 @@ class GrammarVisitor(private val defaultValues: Map<String, Value>) : GrammarBas
             when (x) {
                 is Value.Function -> x(if (y is Value.Tuple) y.values else listOf(y))
                 is Value.Number ->
-                    if (y is Value.Symbol) x.withUnit(y) else error("Not supported number call")
+                    if (y is Value.Symbol) x withUnit y else error("Not supported number call")
                 else -> error("Not supported call")
             }
         }
