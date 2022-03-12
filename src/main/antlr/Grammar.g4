@@ -26,11 +26,15 @@ multiplicativeExpression
     ;
 
 exponentialExpression
-    : atom (('^'|'**') atom)*
+    : call (('^'|'**') call)*
+    ;
+
+call
+    : atom+
     ;
 
 atom
-    : '(' expression ')'                            # parenthesizedExpression
+    : '(' expression* ')'                           # parenthesizedExpression
     | NUMBER                                        # number
     | SYMBOL                                        # symbol
     ;
