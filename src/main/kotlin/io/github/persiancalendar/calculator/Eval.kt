@@ -6,17 +6,17 @@ import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import kotlin.math.*
 
-fun unaryFunction(action: (Double) -> Double): Value.Function {
+private fun unaryFunction(action: (Double) -> Double): Value.Function {
     return Value.Function({ Value.Number(action((it[0] as Value.Number).value)) }, 1)
 }
 
-fun binaryFunction(action: (Double, Double) -> Double): Value.Function {
+private fun binaryFunction(action: (Double, Double) -> Double): Value.Function {
     return Value.Function({
         Value.Number(action((it[0] as Value.Number).value, (it[0] as Value.Number).value))
     }, 2)
 }
 
-val constants = mapOf(
+private val constants = mapOf(
     "PI" to Value.Number(PI), "E" to Value.Number(E),
     "sin" to unaryFunction(::sin), "cos" to unaryFunction(::cos), "tan" to unaryFunction(::tan),
     "asin" to unaryFunction(::asin), "acos" to unaryFunction(::acos),
@@ -37,6 +37,5 @@ fun eval(input: String): String {
     val tokens = CommonTokenStream(lexer)
     val parser = GrammarParser(tokens)
     val eval = GrammarVisitor(constants)
-    eval.visit(parser.program())
-    return eval.result.joinToString("\n")
+    return (eval.visit(parser.program()) as Value.Tuple).values.joinToString("\n")
 }

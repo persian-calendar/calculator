@@ -4,14 +4,14 @@ import io.github.persiancalendar.calculator.parser.GrammarBaseVisitor
 import io.github.persiancalendar.calculator.parser.GrammarParser
 
 class GrammarVisitor(private val defaultValues: Map<String, Value>) : GrammarBaseVisitor<Value>() {
-    private var registry = defaultValues.toMutableMap()
+    private val clearFunction = Value.Function({
+        registry = defaultValues.toMutableMap().also(::addClear)
+        Value.Null
+    }, 0)
+    private var registry = defaultValues.toMutableMap().also(::addClear)
 
-    private val _result = mutableListOf<String>()
-    val result: List<String> = _result
-
-    override fun visitClear(ctx: GrammarParser.ClearContext?): Value {
-        registry = defaultValues.toMutableMap()
-        return Value.Null
+    private fun addClear(map: MutableMap<String, Value>) {
+        map["clear"] = clearFunction
     }
 
     override fun visitAssign(ctx: GrammarParser.AssignContext): Value {
@@ -19,9 +19,13 @@ class GrammarVisitor(private val defaultValues: Map<String, Value>) : GrammarBas
         return Value.Null
     }
 
+    override fun visitProgram(ctx: GrammarParser.ProgramContext): Value {
+        return Value.Tuple(ctx.children.mapNotNull(::visit).filter { it !is Value.Null })
+    }
+
     override fun visitPrintExpression(ctx: GrammarParser.PrintExpressionContext): Value {
-        _result += visit(ctx.expression()).toString()
-        return Value.Null
+        val value = visit(ctx.expression())
+        return if (value is Value.Function && value.inputCount == 0) value(emptyList()) else value
     }
 
     override fun visitNumber(ctx: GrammarParser.NumberContext): Value {

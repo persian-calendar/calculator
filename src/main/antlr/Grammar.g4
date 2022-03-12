@@ -6,7 +6,6 @@ program
 
 statement
     : SYMBOL '=' expression STATEMENT_DELIMITER     # assign
-    | CLEAR                                         # clear
     | COMMENT                                       # comment
     | expression STATEMENT_DELIMITER                # printExpression
     | expression EOF                                # printExpression
@@ -34,7 +33,7 @@ call
     ;
 
 atom
-    : '(' expression* ')'                           # parenthesizedExpression
+    : '(' (expression (',' expression)*)? ')'       # parenthesizedExpression
     | NUMBER                                        # number
     | SYMBOL                                        # symbol
     ;
@@ -49,10 +48,6 @@ fragment INT
     ;
 fragment EXP
     : [Ee] [+\-]? INT
-    ;
-
-CLEAR
-    : 'clear'
     ;
 
 SYMBOL
