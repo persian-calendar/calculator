@@ -57,7 +57,8 @@ private val constants = mapOf(
 )
 
 fun eval(input: String): String {
-    val lexer = GrammarLexer(CharStreams.fromString(input))
+    val normalized = input.replace(Regex(".[-+*/]+"), "$0 ") // FIXME: Remove this hack
+    val lexer = GrammarLexer(CharStreams.fromString(normalized))
     val tokens = CommonTokenStream(lexer)
     val parser = GrammarParser(tokens)
     val eval = GrammarVisitor(constants)
