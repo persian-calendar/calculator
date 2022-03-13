@@ -37,6 +37,9 @@ class Tests {
             "2s = 2 s",
             "sin 90 deg = 1",
             "deg = :deg",
+            "1/0 = Infinity",
+            "-1/0 = -Infinity",
+            "0/0 = NaN",
         ]
     )
     fun `test single line eval`(input: String, expected: String) {

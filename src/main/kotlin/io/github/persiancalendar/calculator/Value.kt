@@ -11,8 +11,15 @@ sealed interface Value {
     }
 
     data class Number(val value: Double, val unit: String? = null) : Value {
-        private fun formatNumber(value: Double): String =
-            if (value == truncate(value)) value.toInt().toString() else value.toString()
+        private fun formatNumber(value: Double): String {
+            return when (value) {
+                Double.POSITIVE_INFINITY -> "Infinity"
+                Double.NEGATIVE_INFINITY -> "-Infinity"
+                Double.NaN -> "NaN"
+                truncate(value) -> value.toInt().toString()
+                else -> value.toString()
+            }
+        }
 
         infix fun withUnit(unit: Symbol) = Number(value, unit.value)
         override fun toString(): String = listOfNotNull(formatNumber(value), unit).joinToString(" ")
