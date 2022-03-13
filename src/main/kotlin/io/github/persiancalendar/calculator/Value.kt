@@ -42,22 +42,33 @@ sealed interface Value {
 
     operator fun plus(other: Value): Value {
         this as Number; other as Number
-        return Number(value + other.value)
+        if (unit == other.unit) return Number(value + other.value, unit)
+        val thisSecondFactor = timeUnits[unit]
+        val otherSecondFactor = timeUnits[other.unit]
+        if (thisSecondFactor == null || otherSecondFactor == null)
+            error("This addition of units isn't supported")
+        return Number(value * thisSecondFactor + other.value * otherSecondFactor, "s")
+
     }
 
-    operator fun minus(other: Value): Value {
-        this as Number; other as Number
-        return Number(value - other.value)
-    }
+    operator fun minus(other: Value): Value = this + Number(-1.0) * other
 
     operator fun times(other: Value): Value {
         this as Number; other as Number
-        return Number(value * other.value)
+        // TODO: Maybe just allowing multiply of two length units? What else should be accepted?
+        if (unit != null && other.unit != null) error("Two numbers with unit are multiplied")
+        return Number(value * other.value, unit ?: other.unit)
     }
 
     operator fun div(other: Value): Value {
         this as Number; other as Number
-        return Number(value / other.value)
+        val resultUnit = when {
+            unit == other.unit -> null // 1m / 2m -> 1 (null)
+            unit == null && other.unit != null -> "1/${other.unit}"
+            unit != null && other.unit == null -> unit
+            else -> "$unit/${other.unit}"
+        }
+        return Number(value / other.value, resultUnit)
     }
 
     operator fun rem(other: Value): Value {
@@ -68,5 +79,9 @@ sealed interface Value {
     fun pow(other: Value): Value {
         this as Number; other as Number
         return Number(value.pow(other.value))
+    }
+
+    companion object {
+        private val timeUnits = mapOf("d" to 86400, "h" to 3600, "m" to 60, "s" to 1)
     }
 }

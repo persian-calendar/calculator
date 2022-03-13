@@ -40,6 +40,7 @@ class Tests {
             "1/0 = Infinity",
             "-1/0 = -Infinity",
             "0/0 = NaN",
+            "1d + 2h + 3m + 4s + 4h + 5s - 2030s + 28h = 206959 s",
         ]
     )
     fun `test single line eval`(input: String, expected: String) {
