@@ -33,7 +33,10 @@ class Tests {
             "cos sin 0 = 1",
             "'sin = cos; clear; sin 0' = 0",
             "'clear = sin; clear 0' = 0",
-            "(3, 2, 2) = (3, 2, 2)"
+            "(3, 2, 2) = (3, 2, 2)",
+            "2s = 2 s",
+            "sin 90 deg = 1",
+            "deg = :deg",
         ]
     )
     fun `test single line eval`(input: String, expected: String) {

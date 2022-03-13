@@ -6,8 +6,31 @@ import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import kotlin.math.*
 
+private fun degOrRadFunction(action: (Double) -> Double): Value.Function {
+    return Value.Function({
+        val number = when (val value = it[0]) {
+            is Value.Number -> when (value.unit) {
+                "deg" -> Math.toRadians(value.value)
+                null -> value.value
+                else -> error("Only degree is acceptable is a degree")
+            }
+            else -> error("Unknown input for deg or rad function")
+        }
+        Value.Number(action(number))
+    }, 1)
+}
+
 private fun unaryFunction(action: (Double) -> Double): Value.Function {
-    return Value.Function({ Value.Number(action((it[0] as Value.Number).value)) }, 1)
+    return Value.Function({
+        val number = when (val value = it[0]) {
+            is Value.Number -> when (value.unit) {
+                null -> value.value
+                else -> error("Unknown unit")
+            }
+            else -> error("Unknown input for unary function")
+        }
+        Value.Number(action(number))
+    }, 1)
 }
 
 private fun binaryFunction(action: (Double, Double) -> Double): Value.Function {
@@ -18,7 +41,8 @@ private fun binaryFunction(action: (Double, Double) -> Double): Value.Function {
 
 private val constants = mapOf(
     "PI" to Value.Number(PI), "E" to Value.Number(E),
-    "sin" to unaryFunction(::sin), "cos" to unaryFunction(::cos), "tan" to unaryFunction(::tan),
+    "sin" to degOrRadFunction(::sin), "cos" to degOrRadFunction(::cos),
+    "tan" to degOrRadFunction(::tan), "cot" to degOrRadFunction { 1 / tan(it) },
     "asin" to unaryFunction(::asin), "acos" to unaryFunction(::acos),
     "atan" to unaryFunction(::atan), "atan2" to binaryFunction(::atan2),
     "sinh" to unaryFunction(::sinh), "cosh" to unaryFunction(::cosh),
