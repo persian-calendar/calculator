@@ -83,7 +83,7 @@ class Tests {
         ]
     )
     fun `test errors`(input: String) {
-        assertThrows(IllegalStateException::class.java) { eval(input) }
+        assertThrows(Exception::class.java) { eval(input) }
     }
 
     @Test

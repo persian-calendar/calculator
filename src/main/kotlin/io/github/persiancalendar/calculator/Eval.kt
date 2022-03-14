@@ -2,8 +2,10 @@ package io.github.persiancalendar.calculator
 
 import io.github.persiancalendar.calculator.parser.GrammarLexer
 import io.github.persiancalendar.calculator.parser.GrammarParser
-import org.antlr.v4.runtime.CharStreams
-import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.*
+import org.antlr.v4.runtime.atn.ATNConfigSet
+import org.antlr.v4.runtime.dfa.DFA
+import java.util.*
 import kotlin.math.*
 
 private fun degOrRadFunction(action: (Double) -> Double): Value.Function {
@@ -56,10 +58,51 @@ private val constants = mapOf(
     "min" to binaryFunction(::min), "max" to binaryFunction(::max),
 )
 
+private val listener = object : ANTLRErrorListener {
+    override fun syntaxError(
+        recognizer: Recognizer<*, *>,
+        offendingSymbol: Any?,
+        line: Int,
+        charPositionInLine: Int,
+        msg: String,
+        e: RecognitionException
+    ) = error("$msg $offendingSymbol")
+
+    override fun reportAmbiguity(
+        recognizer: Parser?,
+        dfa: DFA?,
+        startIndex: Int,
+        stopIndex: Int,
+        exact: Boolean,
+        ambigAlts: BitSet?,
+        configs: ATNConfigSet?
+    ) = print("an ambiguity spotted")
+
+    override fun reportAttemptingFullContext(
+        recognizer: Parser?,
+        dfa: DFA?,
+        startIndex: Int,
+        stopIndex: Int,
+        conflictingAlts: BitSet?,
+        configs: ATNConfigSet?
+    ) = print("an full context attempt happened")
+
+    override fun reportContextSensitivity(
+        recognizer: Parser?,
+        dfa: DFA?,
+        startIndex: Int,
+        stopIndex: Int,
+        prediction: Int,
+        configs: ATNConfigSet?
+    ) = error("an full context sensitivity happened")
+}
+
 fun eval(input: String): String {
     val lexer = GrammarLexer(CharStreams.fromString(input))
+    lexer.addErrorListener(listener)
     val tokens = CommonTokenStream(lexer)
     val parser = GrammarParser(tokens)
+    parser.addErrorListener(listener)
     val eval = GrammarVisitor(constants)
     return (eval.visit(parser.program()) as Value.Tuple).values.joinToString("\n")
 }
