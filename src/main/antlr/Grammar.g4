@@ -25,7 +25,13 @@ multiplicativeExpression
     ;
 
 exponentialExpression
-    : call (('^'|'**') call)*
+    : signedAtom (('^'|'**') signedAtom)*
+    ;
+
+signedAtom
+    : ('-'|'+') signedAtom
+    | call
+    | atom
     ;
 
 call
@@ -39,9 +45,9 @@ atom
     ;
 
 NUMBER
-    : '-'? INT '.' [0-9]+ EXP?
-    | '-'? INT EXP
-    | '-'? INT
+    : INT '.' [0-9]+ EXP?
+    | INT EXP
+    | INT
     ;
 fragment INT
     : '0' | [1-9] [0-9]*

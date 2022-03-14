@@ -28,6 +28,12 @@ class GrammarVisitor(private val defaultValues: Map<String, Value>) : GrammarBas
         return if (value is Value.Function && value.inputCount == 0) value(emptyList()) else value
     }
 
+    override fun visitSignedAtom(ctx: GrammarParser.SignedAtomContext): Value {
+        return if (ctx.childCount == 2 && ctx.children[0].text == "-")
+            Value.Number(-1.0) * visit(ctx.signedAtom())
+        else super.visitSignedAtom(ctx)
+    }
+
     override fun visitNumber(ctx: GrammarParser.NumberContext): Value {
         return Value.Number(ctx.NUMBER().text.toDouble())
     }
@@ -40,7 +46,7 @@ class GrammarVisitor(private val defaultValues: Map<String, Value>) : GrammarBas
     override fun visitExponentialExpression(
         ctx: GrammarParser.ExponentialExpressionContext
     ): Value {
-        return ctx.call().map(::visit).reduceRight { x, y ->
+        return ctx.signedAtom().map(::visit).reduceRight { x, y ->
             x as Value.Number; y as Value.Number
             x.pow(y)
         }
