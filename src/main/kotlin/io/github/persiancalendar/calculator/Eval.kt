@@ -104,5 +104,8 @@ fun eval(input: String): String {
     val parser = GrammarParser(tokens)
     parser.addErrorListener(listener)
     val eval = GrammarVisitor(constants)
-    return (eval.visit(parser.program()) as Value.Tuple).values.joinToString("\n")
+    val result = (eval.visit(parser.program()) as Value.Tuple).values
+    return if (result.size == 1 && result[0] is Value.Number)
+        (result[0] as Value.Number).detailedFormat()
+    else result.joinToString("\n")
 }

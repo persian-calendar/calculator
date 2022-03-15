@@ -1,5 +1,6 @@
 package io.github.persiancalendar.calculator
 
+import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.truncate
 
@@ -21,8 +22,21 @@ sealed interface Value {
             }
         }
 
-        infix fun withUnit(unit: Symbol) = Number(value, unit.value)
+        infix fun withUnit(unit: Symbol): Number {
+            if (this.unit != null) error("Trying to add unit to a number already with unit")
+            return Number(value, unit.value)
+        }
+
         override fun toString(): String = listOfNotNull(formatNumber(value), unit).joinToString(" ")
+
+        fun detailedFormat(): String {
+            if (unit != "s") return toString()
+            return timeUnits.toList().fold("" to value) { (result, reminder), unit ->
+                result + floor(reminder / unit.second).toInt() + unit.first + " " to
+                        reminder % unit.second
+            }.first.trim() + "\n" + timeUnits.map { "${formatNumber(value / it.value)} ${it.key}" }
+                .joinToString("\n")
+        }
     }
 
     data class Function(

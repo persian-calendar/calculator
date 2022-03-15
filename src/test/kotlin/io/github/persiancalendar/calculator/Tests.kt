@@ -35,7 +35,6 @@ class Tests {
             "'sin = cos; clear; sin 0' = 0",
             "'clear = sin; clear 0' = 0",
             "(3, 2, 2) = (3, 2, 2)",
-            "2s = 2 s",
             "sin 90 deg = 1",
             "deg = :deg",
             "1/0 = Infinity",
@@ -59,8 +58,6 @@ class Tests {
             "2 *    ( 2 - 2) = 0",
             "7 / 5 * ( 2 + 2 * 2 ) = 8.399999999999999",
             "7 / 5 * (((10 + 5) / 2.0 * 2 + (25-10/2*2.0)) / ((5 -7) - 4- 4/2 + 2) * 2) = -14",
-            "1d + 2h + 3m + 4s + 4h + 5s - 2030s + 28h = 206959 s",
-            "'1d 2h 3m 4s + 4h 5s - 2030s + 28h' = 206959 s",
             "'2 *2 + 2  ' = 6",
             "'2 *2 + 2  ' = 6",
             "'  2  + 2*      2' = 6",
@@ -73,6 +70,40 @@ class Tests {
     )
     fun `test single line eval`(input: String, expected: String) {
         assertEquals(expected, eval(input))
+    }
+
+    @Test
+    fun `test time calculator`() {
+        assertEquals(
+            """
+                0d 0h 0m 2s
+                2.3148148148148147E-5 d
+                5.555555555555556E-4 h
+                0.03333333333333333 m
+                2 s
+            """.trimIndent(),
+            eval("2s")
+        )
+        assertEquals(
+            """
+                2d 9h 29m 19s
+                2.3953587962962963 d
+                57.48861111111111 h
+                3449.3166666666666 m
+                206959 s
+            """.trimIndent(),
+            eval("1d + 2h + 3m + 4s + 4h + 5s - 2030s + 28h")
+        )
+        assertEquals(
+            """
+                2d 9h 29m 19s
+                2.3953587962962963 d
+                57.48861111111111 h
+                3449.3166666666666 m
+                206959 s
+            """.trimIndent(),
+            eval("1d 2h 3m 4s + 4h 5s - 2030s + 28h")
+        )
     }
 
     @ParameterizedTest
