@@ -84,7 +84,13 @@ class GrammarVisitor(private val defaultValues: Map<String, Value>) : GrammarBas
     }
 
     override fun visitCall(ctx: GrammarParser.CallContext): Value {
-        return ctx.atom().map(::visit).reduceRight { x, y -> // This should be a left reduce prolly
+        val callSeries = ctx.atom().map(::visit)
+        val pairs = callSeries.takeIf { it.size % 2 == 0 }?.chunked(2)
+        if (pairs?.all { (x, y) -> x is Value.Number && y is Value.Symbol } == true)
+            return pairs
+                .map { (x, y) -> (x as Value.Number) withUnit (y as Value.Symbol) }
+                .reduce { acc, x -> acc + x }
+        return callSeries.reduceRight { x, y -> // This should be a left reduce probably
             when (x) {
                 is Value.Function -> x(if (y is Value.Tuple) y.values else listOf(y))
                 is Value.Number ->

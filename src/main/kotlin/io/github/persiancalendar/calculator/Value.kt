@@ -40,7 +40,7 @@ sealed interface Value {
             "(${values.joinToString(", ", transform = Value::toString)})"
     }
 
-    operator fun plus(other: Value): Value {
+    operator fun plus(other: Value): Number {
         this as Number; other as Number
         if (unit == other.unit) return Number(value + other.value, unit)
         val thisSecondFactor = timeUnits[unit]
@@ -48,19 +48,18 @@ sealed interface Value {
         if (thisSecondFactor == null || otherSecondFactor == null)
             error("This addition of units isn't supported")
         return Number(value * thisSecondFactor + other.value * otherSecondFactor, "s")
-
     }
 
-    operator fun minus(other: Value): Value = this + Number(-1.0) * other
+    operator fun minus(other: Value): Number = this + Number(-1.0) * other
 
-    operator fun times(other: Value): Value {
+    operator fun times(other: Value): Number {
         this as Number; other as Number
         // TODO: Maybe just allowing multiply of two length units? What else should be accepted?
         if (unit != null && other.unit != null) error("Two numbers with unit are multiplied")
         return Number(value * other.value, unit ?: other.unit)
     }
 
-    operator fun div(other: Value): Value {
+    operator fun div(other: Value): Number {
         this as Number; other as Number
         val resultUnit = when {
             unit == other.unit -> null // 1m / 2m -> 1 (null)
@@ -71,12 +70,12 @@ sealed interface Value {
         return Number(value / other.value, resultUnit)
     }
 
-    operator fun rem(other: Value): Value {
+    operator fun rem(other: Value): Number {
         this as Number; other as Number
         return Number(value % other.value)
     }
 
-    fun pow(other: Value): Value {
+    fun pow(other: Value): Number {
         this as Number; other as Number
         return Number(value.pow(other.value))
     }
