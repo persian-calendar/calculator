@@ -1,24 +1,25 @@
 # Calendar
-[![](https://jitpack.io/v/persian-calendar/calendar.svg)](https://jitpack.io/#persian-calendar/calculator)
+[![](https://jitpack.io/v/persian-calendar/calculator.svg)](https://jitpack.io/#persian-calendar/calculator)
 
 Mathematics expressions evaluator
 
 # Usage
-### Gradle
-Add it in your root build.gradle at the end of repositories:
-```groovy
+
+Add this in your root build.gradle at the end of repositories section:
+```kotlin
 allprojects {
     repositories {
         ...
-        maven { url 'https://jitpack.io' }
+        maven("https://jitpack.io")
     }
 }
-```  
-Add the dependency
 ```
+
+Now actually add the dependency:
+```kotlin
 dependencies {
-    implementation 'com.github.persian-calendar:calculator:0.0.1'
+    implementation("com.github.persian-calendar:calculator:0.0.1")
 }
 ```
  
-for other build tools refer to [this](https://jitpack.io/#persian-calendar/calculator) documentation.
+For other build tools support have a look at [this](https://jitpack.io/#persian-calendar/calculator).
