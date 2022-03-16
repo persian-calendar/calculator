@@ -8,54 +8,73 @@ import org.antlr.v4.runtime.dfa.DFA
 import java.util.*
 import kotlin.math.*
 
-private fun degOrRadFunction(action: (Double) -> Double): Value.Function {
-    return Value.Function({
-        val number = when (val value = it[0]) {
-            is Value.Number -> when (value.unit) {
-                "deg" -> Math.toRadians(value.value)
-                null -> value.value
-                else -> error("Only degree is acceptable is a degree")
-            }
-            else -> error("Unknown input for deg or rad function")
+private fun degOrRadFunction(
+    name: String,
+    action: (Double) -> Double
+): Pair<String, Value.Function> {
+    return name to Value.Function({
+        when (val value = it[0]) {
+            is Value.Number -> Value.Number(
+                action(
+                    when (value.unit) {
+                        "deg" -> Math.toRadians(value.value)
+                        null -> value.value
+                        else -> error("Only degree is acceptable as a unit")
+                    }
+                )
+            )
+            else -> Value.Expression(Value.Symbol(name), it)
         }
-        Value.Number(action(number))
     }, 1)
 }
 
-private fun unaryFunction(action: (Double) -> Double): Value.Function {
-    return Value.Function({
-        val number = when (val value = it[0]) {
-            is Value.Number -> when (value.unit) {
-                null -> value.value
-                else -> error("Unknown unit")
-            }
-            else -> error("Unknown input for unary function")
+private fun unaryFunction(
+    name: String,
+    action: (Double) -> Double
+): Pair<String, Value.Function> {
+    return name to Value.Function({
+        when (val value = it[0]) {
+            is Value.Number -> Value.Number(
+                action(
+                    when (value.unit) {
+                        null -> value.value
+                        else -> error("This unary functions don't accept number with unit.")
+                    }
+                )
+            )
+            else -> Value.Expression(Value.Symbol(name), it)
         }
-        Value.Number(action(number))
     }, 1)
 }
 
 private fun binaryFunction(action: (Double, Double) -> Double): Value.Function {
     return Value.Function({
-        Value.Number(action((it[0] as Value.Number).value, (it[0] as Value.Number).value))
+        val (x, y) = it
+        if ((x as Value.Number).unit != null || (y as Value.Number).unit != null)
+            error("this binary function only accepts numbers without unit")
+        Value.Number(action(x.value, y.value))
     }, 2)
 }
 
 private val constants = mapOf(
     "PI" to Value.Number(PI), "E" to Value.Number(E),
-    "sin" to degOrRadFunction(::sin), "cos" to degOrRadFunction(::cos),
-    "tan" to degOrRadFunction(::tan), "cot" to degOrRadFunction { 1 / tan(it) },
-    "asin" to unaryFunction(::asin), "acos" to unaryFunction(::acos),
-    "atan" to unaryFunction(::atan), "atan2" to binaryFunction(::atan2),
-    "sinh" to unaryFunction(::sinh), "cosh" to unaryFunction(::cosh),
-    "tanh" to unaryFunction(::tanh), "asinh" to unaryFunction(::asinh),
-    "acosh" to unaryFunction(::acosh), "asinh" to unaryFunction(::atanh),
-    "hypot" to binaryFunction(::hypot), "sqrt" to unaryFunction(::sqrt),
-    "exp" to unaryFunction(::exp), "log" to binaryFunction(::log), "ln" to unaryFunction(::ln),
-    "ceil" to unaryFunction(::ceil), "floor" to unaryFunction(::floor),
-    "truncate" to unaryFunction(::truncate), "round" to unaryFunction(::round),
-    "abs" to unaryFunction(::abs), "sign" to unaryFunction(::sign),
+    degOrRadFunction("sin", ::sin), degOrRadFunction("cos", ::cos),
+    degOrRadFunction("tan", ::tan), degOrRadFunction("cot") { 1 / tan(it) },
+    unaryFunction("asin", ::asin), unaryFunction("acos", ::acos),
+    unaryFunction("atan", ::atan), "atan2" to binaryFunction(::atan2),
+    unaryFunction("sinh", ::sinh), unaryFunction("cosh", ::cosh),
+    unaryFunction("tanh", ::tanh), unaryFunction("asinh", ::asinh),
+    unaryFunction("acosh", ::acosh), unaryFunction("asinh", ::atanh),
+    "hypot" to binaryFunction(::hypot), unaryFunction("sqrt", ::sqrt),
+    unaryFunction("exp", ::exp), "log" to binaryFunction(::log), unaryFunction("ln", ::ln),
+    unaryFunction("ceil", ::ceil), unaryFunction("floor", ::floor),
+    unaryFunction("truncate", ::truncate), unaryFunction("round", ::round),
+    unaryFunction("abs", ::abs), unaryFunction("sign", ::sign),
     "min" to binaryFunction(::min), "max" to binaryFunction(::max),
+    "+" to binaryFunction { x, y -> x + y }, "-" to binaryFunction { x, y -> x - y },
+    "*" to binaryFunction { x, y -> x * y }, "/" to binaryFunction { x, y -> x / y },
+    "%" to binaryFunction { x, y -> x % y },
+    "^" to binaryFunction { x, y -> x.pow(y) }, "**" to binaryFunction { x, y -> x.pow(y) },
 )
 
 private val listener = object : ANTLRErrorListener {

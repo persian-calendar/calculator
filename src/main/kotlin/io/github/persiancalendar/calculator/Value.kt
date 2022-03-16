@@ -13,8 +13,7 @@ sealed interface Value {
         override fun toString(): String = ":$name"
 
         companion object {
-            operator fun getValue(thisRef: Any?, property: KProperty<*>) =
-                Symbol(property.name)
+            operator fun getValue(thisRef: Any?, property: KProperty<*>) = Symbol(property.name)
         }
     }
 

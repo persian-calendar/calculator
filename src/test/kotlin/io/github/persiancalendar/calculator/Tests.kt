@@ -70,6 +70,8 @@ class Tests {
             "'a = 2' = ''",
             "'// a' = ''", //"'# a' = ''", TODO: make this work
             "'' = ''", "';' = ''", "';;' = ''",
+            "'' = ''", "';' = ''", "';;' = ''",
+            "'sin(ln(x))' = 'sin(ln(:x))'",
         ]
     )
     fun `test single line eval`(input: String, expected: String) {
