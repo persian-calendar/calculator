@@ -3,12 +3,19 @@ package io.github.persiancalendar.calculator
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.truncate
+import kotlin.properties.ReadOnlyProperty
+import kotlin.reflect.KProperty
 
 sealed interface Value {
     object Null : Value
 
-    data class Symbol(val value: String) : Value {
-        override fun toString(): String = ":$value"
+    data class Symbol(val name: String) : Value {
+        override fun toString(): String = ":$name"
+
+        companion object {
+            operator fun getValue(thisRef: Any?, property: KProperty<*>) =
+                Symbol(property.name)
+        }
     }
 
     data class Number(val value: Double, val unit: String? = null) : Value {
@@ -24,7 +31,7 @@ sealed interface Value {
 
         infix fun withUnit(unit: Symbol): Number {
             if (this.unit != null) error("Trying to add unit to a number already with unit")
-            return Number(value, unit.value)
+            return Number(value, unit.name)
         }
 
         override fun toString(): String = listOfNotNull(formatNumber(value), unit).joinToString(" ")
@@ -54,8 +61,18 @@ sealed interface Value {
             "(${values.joinToString(", ", transform = Value::toString)})"
     }
 
-    operator fun plus(other: Value): Number {
-        this as Number; other as Number
+    data class Expression(val function: Symbol, val arguments: List<Value>) : Value {
+        override fun toString(): String {
+            return when (function.name) {
+                "+", "-", "/", "*", "%", "**", "^" ->
+                    "(${arguments.joinToString(" ${function.name} ")})"
+                else -> "${function.name}(${arguments.joinToString(", ")})"
+            }
+        }
+    }
+
+    operator fun plus(other: Value): Value {
+        if (this !is Number || other !is Number) return Symbol("+")(this, other)
         if (unit == other.unit) return Number(value + other.value, unit)
         val thisSecondFactor = timeUnits[unit]
         val otherSecondFactor = timeUnits[other.unit]
@@ -64,17 +81,20 @@ sealed interface Value {
         return Number(value * thisSecondFactor + other.value * otherSecondFactor, "s")
     }
 
-    operator fun minus(other: Value): Number = this + Number(-1.0) * other
+    operator fun minus(other: Value): Value {
+        if (this !is Number || other !is Number) return Symbol("-")(this, other)
+        return this + Number(-1.0) * other
+    }
 
-    operator fun times(other: Value): Number {
-        this as Number; other as Number
+    operator fun times(other: Value): Value {
+        if (this !is Number || other !is Number) return Symbol("*")(this, other)
         // TODO: Maybe just allowing multiply of two length units? What else should be accepted?
         if (unit != null && other.unit != null) error("Two numbers with unit are multiplied")
         return Number(value * other.value, unit ?: other.unit)
     }
 
-    operator fun div(other: Value): Number {
-        this as Number; other as Number
+    operator fun div(other: Value): Value {
+        if (this !is Number || other !is Number) return Symbol("/")(this, other)
         val resultUnit = when {
             unit == other.unit -> null // 1m / 2m -> 1 (null)
             unit == null && other.unit != null -> "1/${other.unit}"
@@ -84,14 +104,19 @@ sealed interface Value {
         return Number(value / other.value, resultUnit)
     }
 
-    operator fun rem(other: Value): Number {
-        this as Number; other as Number
+    operator fun rem(other: Value): Value {
+        if (this !is Number || other !is Number) return Symbol("%")(this, other)
         return Number(value % other.value)
     }
 
-    fun pow(other: Value): Number {
-        this as Number; other as Number
+    fun pow(other: Value): Value {
+        if (this !is Number || other !is Number) return Symbol("^")(this, other)
         return Number(value.pow(other.value))
+    }
+
+    operator fun invoke(vararg arguments: Value): Expression {
+        this as Symbol
+        return Expression(this, arguments.toList())
     }
 
     companion object {

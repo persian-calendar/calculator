@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import kotlin.properties.ReadOnlyProperty
 
 class Tests {
     @ParameterizedTest
@@ -73,6 +74,31 @@ class Tests {
     )
     fun `test single line eval`(input: String, expected: String) {
         assertEquals(expected, eval(input))
+    }
+
+    @Test
+    fun `test expressions`() {
+        assertEquals(
+            "(2 + 3 + 4)",
+            Value.Expression(
+                Value.Symbol("+"),
+                listOf(2.0, 3.0, 4.0).map(Value::Number)
+            ).toString()
+        )
+        val sin by Value.Symbol
+        val x by Value.Symbol
+        val two = Value.Number(2.0)
+        assertEquals(
+            "sin((:x ^ 2))",
+            Value.Expression(
+                Value.Symbol("sin"),
+                listOf(Value.Expression(Value.Symbol("^"), listOf(x, two)))
+            ).toString()
+        )
+        assertEquals(
+            "sin((:x ^ ((4 + :x) + 2)))",
+            sin(x.pow(two + two + x + two)).toString()
+        )
     }
 
     @Test
