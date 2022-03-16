@@ -67,6 +67,8 @@ class Tests {
             "-5++1 = -4",
             "2 *-2 + 2  * 2 + 2 -2 / -4 = 2.5",
             "'a = 2' = ''",
+            "'// a' = ''", //"'# a' = ''", TODO: make this work
+            "'' = ''", "';' = ''", "';;' = ''",
         ]
     )
     fun `test single line eval`(input: String, expected: String) {

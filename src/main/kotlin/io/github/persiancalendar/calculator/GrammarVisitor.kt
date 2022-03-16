@@ -20,7 +20,9 @@ class GrammarVisitor(private val defaultValues: Map<String, Value>) : GrammarBas
     }
 
     override fun visitProgram(ctx: GrammarParser.ProgramContext): Value {
-        return Value.Tuple(ctx.children.mapNotNull(::visit).filter { it !is Value.Null })
+        return Value.Tuple(
+            ctx.children?.mapNotNull(::visit)?.filter { it !is Value.Null } ?: emptyList()
+        )
     }
 
     override fun visitPrintExpression(ctx: GrammarParser.PrintExpressionContext): Value {
