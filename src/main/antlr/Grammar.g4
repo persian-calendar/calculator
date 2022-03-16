@@ -6,6 +6,7 @@ program
 
 statement
     : SYMBOL '=' expression STATEMENT_DELIMITER     # assign
+    | SYMBOL '=' expression EOF                     # assign
     | COMMENT                                       # comment
     | expression STATEMENT_DELIMITER                # printExpression
     | expression EOF                                # printExpression
