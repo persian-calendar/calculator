@@ -37,7 +37,7 @@ class Tests {
             "'clear = sin; clear 0' = 0",
             "(3, 2, 2) = (3, 2, 2)",
             "sin 90 deg = 1",
-            "deg = :deg",
+            "deg = deg",
             "1/0 = Infinity",
             "-1/0 = -Infinity",
             "' -1/0' = -Infinity",
@@ -71,11 +71,45 @@ class Tests {
             "'// a' = ''", //"'# a' = ''", TODO: make this work
             "'' = ''", "';' = ''", "';;' = ''",
             "'' = ''", "';' = ''", "';;' = ''",
-            "'sin(ln(x))' = 'sin(ln(:x))'",
+            "'sin(ln(x))' = 'sin(ln(x))'",
+            "2 *-2 +aa  * 2 + 2 -2 / -4 = (((-4 + (aa * 2)) + 2) - -0.5)",
         ]
     )
     fun `test single line eval`(input: String, expected: String) {
         assertEquals(expected, eval(input))
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        delimiter = '=',
+        value = [
+            "x + c + 1 = 1",
+            "x - c + 1 = 1",
+            "-x - c + 1 = -1",
+            "x * x = ((x * 1) + (x * 1))",
+            "2 * x * x = (((2 * x) * 1) + (x * 2))",
+            "x / 2 = (2 / 4)",
+            "x^23 = ((23 * (x ^ 22)) * 1)",
+            "sqrt(x) = (0.5 / sqrt(x))",
+            "ln(x) = (1 / x)",
+            "ln(x^12) = (((12 * (x ^ 11)) * 1) / (x ^ 12))", // which simplifies as 12/x
+            "exp(x^25) = (exp((x ^ 25)) * ((25 * (x ^ 24)) * 1))",
+            "sin(2 * x) = (cos((2 * x)) * 2)",
+            "sin(cos(x)) = (cos(cos(x)) * ((-1 * sin(x)) * 1))",
+            "tan(cos(x)) = ((1 + (tan(cos(x)) ^ 2)) * ((-1 * sin(x)) * 1))",
+            "x = 1",
+            "3 = 0",
+            "y = 0",
+            "x+7 = 1",
+            "x*5 = 5",
+            "5*x = 5",
+            "x^3 + 2*x^2 - 4*x + 3 = ((((3 * (x ^ 2)) * 1) + (2 * ((2 * (x ^ 1)) * 1))) - 4)",
+            "sqrt(x^2 + 2) = ((0.5 * ((2 * (x ^ 1)) * 1)) / sqrt(((x ^ 2) + 2)))",
+            "ln((1 + x)^3) = (((3 * ((1 + x) ^ 2)) * 1) / ((1 + x) ^ 3))",
+        ]
+    )
+    fun `test differentiation`(input: String, expected: String) {
+        assertEquals(expected, eval("diff($input, x)"))
     }
 
     @Test
@@ -91,15 +125,15 @@ class Tests {
         val x by Value.Symbol
         val two = Value.Number(2.0)
         assertEquals(
-            "sin((:x ^ 2))",
+            "sin((x ^ 2))",
             Value.Expression(
                 Value.Symbol("sin"),
                 listOf(Value.Expression(Value.Symbol("^"), listOf(x, two)))
             ).toString()
         )
         assertEquals(
-            "sin((:x ^ ((4 + :x) + 2)))",
-            sin(x.pow(two + two + x + two)).toString()
+            "sin((x ^ ((4 + x) + 2)))",
+            sin(x `^` (two + two + x + two)).toString()
         )
     }
 
@@ -140,7 +174,6 @@ class Tests {
     @ParameterizedTest
     @CsvSource(
         value = [
-            "2 *-2 +aa  * 2 + 2 -2 / -4",
             "5+ 5 5 6 +  7",
             "7 / 5 * ((2 + 2) / (((5 -7) + 2) * 2)",
         ]

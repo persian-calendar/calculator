@@ -10,7 +10,7 @@ sealed interface Value {
     object Null : Value
 
     data class Symbol(val name: String) : Value {
-        override fun toString(): String = ":$name"
+        override fun toString(): String = name
 
         companion object {
             operator fun getValue(thisRef: Any?, property: KProperty<*>) = Symbol(property.name)
@@ -63,8 +63,11 @@ sealed interface Value {
     data class Expression(val function: Symbol, val arguments: List<Value>) : Value {
         override fun toString(): String {
             return when (function.name) {
-                "+", "-", "/", "*", "%", "**", "^" ->
-                    "(${arguments.joinToString(" ${function.name} ")})"
+                "+", "-", "/", "*", "%", "**", "^" -> when (arguments.size) {
+                    0 -> "0"
+                    1 -> arguments[0].toString()
+                    else -> "(${arguments.joinToString(" ${function.name} ")})"
+                }
                 else -> "${function.name}(${arguments.joinToString(", ")})"
             }
         }
@@ -108,7 +111,7 @@ sealed interface Value {
         return Number(value % other.value)
     }
 
-    fun pow(other: Value): Value {
+    infix fun `^`(other: Value): Value {
         if (this !is Number || other !is Number) return Symbol("^")(this, other)
         return Number(value.pow(other.value))
     }

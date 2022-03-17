@@ -48,10 +48,7 @@ class GrammarVisitor(private val defaultValues: Map<String, Value>) : GrammarBas
     override fun visitExponentialExpression(
         ctx: GrammarParser.ExponentialExpressionContext
     ): Value {
-        return ctx.signedAtom().map(::visit).reduceRight { x, y ->
-            x as Value.Number; y as Value.Number
-            x.pow(y)
-        }
+        return ctx.signedAtom().map(::visit).reduceRight { x, y -> x `^` y }
     }
 
     override fun visitMultiplicativeExpression(
@@ -69,7 +66,6 @@ class GrammarVisitor(private val defaultValues: Map<String, Value>) : GrammarBas
 
     override fun visitAdditiveExpression(ctx: GrammarParser.AdditiveExpressionContext): Value {
         return ctx.multiplicativeExpression().map(::visit).reduceIndexed { i, x, y ->
-            x as Value.Number; y as Value.Number
             when (ctx.getChild((i - 1) * 2 + 1).text) {
                 "+" -> x + y
                 "-" -> x - y

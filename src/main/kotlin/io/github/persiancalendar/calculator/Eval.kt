@@ -75,6 +75,7 @@ private val constants = mapOf(
     "*" to binaryFunction { x, y -> x * y }, "/" to binaryFunction { x, y -> x / y },
     "%" to binaryFunction { x, y -> x % y },
     "^" to binaryFunction { x, y -> x.pow(y) }, "**" to binaryFunction { x, y -> x.pow(y) },
+    "diff" to Value.Function({ diff(it[0], it[1] as Value.Symbol) }),
 )
 
 private val listener = object : ANTLRErrorListener {
