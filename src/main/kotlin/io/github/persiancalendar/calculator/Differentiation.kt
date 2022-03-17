@@ -43,7 +43,7 @@ fun diff(f: Value, symbol: Value.Symbol): Value {
                             arguments.all { (it as? Value.Number)?.value != .0 }
                             // TODO: Move this logic to the operator itself
                         }
-                    ) / (f.arguments[1] `^` Value.Number(2.0))
+                    ) / (f.arguments[1].pow(Value.Number(2.0)))
                 }
                 "^" -> {
                     if (f.arguments.size != 2)
@@ -52,7 +52,7 @@ fun diff(f: Value, symbol: Value.Symbol): Value {
                     if (exponent !is Value.Number)
                         error("Only constant exponents are supported")
                     exponent *
-                            (f.arguments[0] `^` Value.Number(exponent.value - 1)) *
+                            (f.arguments[0].pow(Value.Number(exponent.value - 1))) *
                             diff(f.arguments[0], symbol)
                 }
                 "sqrt" -> {
@@ -83,7 +83,7 @@ fun diff(f: Value, symbol: Value.Symbol): Value {
                 "tan" -> {
                     if (f.arguments.size != 1) error("Sqrt should have one argument")
                     (Value.Number(1.0) +
-                            (Value.Symbol("tan")(f.arguments[0]) `^` Value.Number(2.0))
+                            (Value.Symbol("tan")(f.arguments[0]).pow(Value.Number(2.0)))
                             ) * diff(f.arguments[0], symbol)
                 }
                 // TODO: Implement chain rule once instead repeatinng it

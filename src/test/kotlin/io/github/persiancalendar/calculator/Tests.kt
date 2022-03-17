@@ -133,7 +133,7 @@ class Tests {
         )
         assertEquals(
             "sin((x ^ ((4 + x) + 2)))",
-            sin(x `^` (two + two + x + two)).toString()
+            sin(x.pow(two + two + x + two)).toString()
         )
     }
 

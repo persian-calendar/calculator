@@ -111,7 +111,7 @@ sealed interface Value {
         return Number(value % other.value)
     }
 
-    infix fun `^`(other: Value): Value {
+    fun pow(other: Value): Value {
         if (this !is Number || other !is Number) return Symbol("^")(this, other)
         return Number(value.pow(other.value))
     }
