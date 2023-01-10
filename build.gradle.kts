@@ -16,7 +16,7 @@ dependencies {
     antlr("org.antlr:antlr4:4.9.3")
     implementation("org.antlr:antlr4-runtime:4.9.3")
     testImplementation(kotlin("test"))
-    val junit5Version = "5.8.2"
+    val junit5Version = "5.9.2"
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junit5Version")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junit5Version")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junit5Version")
