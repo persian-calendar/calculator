@@ -13,8 +13,8 @@ repositories {
 }
 
 dependencies {
-    antlr("org.antlr:antlr4:4.9.3")
-    implementation("org.antlr:antlr4-runtime:4.9.3")
+    antlr("org.antlr:antlr4:4.13.0")
+    implementation("org.antlr:antlr4-runtime:4.13.0")
     testImplementation(kotlin("test"))
     val junit5Version = "5.9.2"
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junit5Version")
