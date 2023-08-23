@@ -1,7 +1,7 @@
 plugins {
     java
     antlr
-    kotlin("jvm") version "1.8.10"
+    kotlin("jvm") version "1.9.10"
     `maven-publish`
 }
 
