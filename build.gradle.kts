@@ -1,7 +1,7 @@
 plugins {
     java
     antlr
-    kotlin("jvm") version "1.8.10"
+    kotlin("jvm") version "1.9.22"
     `maven-publish`
 }
 
@@ -39,7 +39,7 @@ tasks.test {
 }
 
 configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_17
 }
 
 publishing {
