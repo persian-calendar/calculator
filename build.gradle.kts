@@ -1,7 +1,9 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     java
     antlr
-    kotlin("jvm") version "2.0.21"
+    kotlin("jvm") version "2.2.20"
     `maven-publish`
 }
 
@@ -16,7 +18,7 @@ dependencies {
     antlr("org.antlr:antlr4:4.13.2")
     implementation("org.antlr:antlr4-runtime:4.13.2")
     testImplementation(kotlin("test"))
-    val junit5Version = "5.13.4"
+    val junit5Version = "6.0.0"
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junit5Version")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junit5Version")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junit5Version")
@@ -38,14 +40,22 @@ tasks.test {
     useJUnitPlatform()
 }
 
-configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_1_8
+kotlin {
+    jvmToolchain(21)
+    compilerOptions { jvmTarget = JvmTarget.JVM_21 }
+}
+
+val sourceJar by tasks.registering(Jar::class) {
+    dependsOn(tasks["classes"])
+    archiveClassifier.set("sources")
+    from(sourceSets["main"].allSource)
 }
 
 publishing {
     publications {
         register("mavenJava", MavenPublication::class) {
-            from(components["java"])
+            from(components["kotlin"])
+            artifact(sourceJar)
         }
     }
 }
