@@ -32,7 +32,8 @@ configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
 tasks.generateGrammarSource {
     maxHeapSize = "64m"
     arguments = arguments + listOf("-no-listener", "-visitor", "-package", "io.github.persiancalendar.calculator.parser")
-    outputDirectory = File("${project.buildDir}/generated-src/antlr/main/io/github/persiancalendar/calculator/parser")
+    outputDirectory =
+        File("${project.layout.buildDirectory.get()}/generated-src/antlr/main/io/github/persiancalendar/calculator/parser")
 }
 tasks.named("compileKotlin").configure { dependsOn(tasks.generateGrammarSource) }
 
