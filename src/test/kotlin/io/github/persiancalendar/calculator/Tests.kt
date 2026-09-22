@@ -1,16 +1,35 @@
 package io.github.persiancalendar.calculator
 
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.CsvSource
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 
+private fun parseCase(csvRow: String): Pair<String, String> {
+    val row = csvRow.trim()
+    val input: String
+    val rest: String
+    if (row.startsWith("'")) {
+        val end = row.indexOf('\'', 1)
+        check(end >= 0) { "Missing closing quote in: $csvRow" }
+        input = row.substring(1, end)
+        rest = row.substring(end + 1)
+    } else {
+        val idx = row.indexOf('=')
+        check(idx >= 0) { "Missing '=' in: $csvRow" }
+        input = row.substring(0, idx).trim()
+        rest = row.substring(idx + 1)
+    }
+    return input to unquote(rest.trim().removePrefix("=").trim())
+}
+
+private fun unquote(value: String): String =
+    if (value.length >= 2 && value.startsWith("'") && value.endsWith("'"))
+        value.substring(1, value.length - 1) else value
+
 class Tests {
-    @ParameterizedTest
-    @CsvSource(
-        delimiter = '=',
-        value = [
+    @Test
+    fun `test single line eval`() {
+        val cases = listOf(
             "1 / 2 = 0.5",
             "2 + 2 = 4",
             "2 + 2 * 2 = 6",
@@ -72,16 +91,16 @@ class Tests {
             "'' = ''", "';' = ''", "';;' = ''",
             "'sin(ln(x))' = 'sin(ln(x))'",
             "2 *-2 +aa  * 2 + 2 -2 / -4 = (((-4 + (aa * 2)) + 2) - -0.5)",
-        ]
-    )
-    fun `test single line eval`(input: String, expected: String) {
-        assertEquals(expected, eval(input))
+        )
+        for (row in cases) {
+            val (input, expected) = parseCase(row)
+            assertEquals(expected, eval(input), input)
+        }
     }
 
-    @ParameterizedTest
-    @CsvSource(
-        delimiter = '=',
-        value = [
+    @Test
+    fun `test differentiation`() {
+        val cases = listOf(
             "x + c + 1 = 1",
             "x - c + 1 = 1",
             "-x - c + 1 = -1",
@@ -105,10 +124,11 @@ class Tests {
             "x^3 + 2*x^2 - 4*x + 3 = ((((3 * (x ^ 2)) * 1) + (2 * ((2 * (x ^ 1)) * 1))) - 4)",
             "sqrt(x^2 + 2) = ((0.5 * ((2 * (x ^ 1)) * 1)) / sqrt(((x ^ 2) + 2)))",
             "ln((1 + x)^3) = (((3 * ((1 + x) ^ 2)) * 1) / ((1 + x) ^ 3))",
-        ]
-    )
-    fun `test differentiation`(input: String, expected: String) {
-        assertEquals(expected, eval("diff($input, x)"))
+        )
+        for (row in cases) {
+            val (input, expected) = parseCase(row)
+            assertEquals(expected, eval("diff($input, x)"), input)
+        }
     }
 
     @Test
@@ -170,15 +190,13 @@ class Tests {
         )
     }
 
-    @ParameterizedTest
-    @CsvSource(
-        value = [
+    @Test
+    fun `test errors`() {
+        val inputs = listOf(
             "5+ 5 5 6 +  7",
             "7 / 5 * ((2 + 2) / (((5 -7) + 2) * 2)",
-        ]
-    )
-    fun `test errors`(input: String) {
-        assertFails { eval(input) }
+        )
+        for (input in inputs) assertFails { eval(input) }
     }
 
     @Test
