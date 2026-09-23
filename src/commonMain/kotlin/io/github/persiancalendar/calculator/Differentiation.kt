@@ -86,7 +86,7 @@ fun diff(f: Value, symbol: Value.Symbol): Value {
                             (Value.Symbol("tan")(f.arguments[0]).pow(Value.Number(2.0)))
                             ) * diff(f.arguments[0], symbol)
                 }
-                // TODO: Implement chain rule once instead repeatinng it
+                // TODO: Implement chain rule once instead repeating it
                 else -> error("Not supported function to differentiate $f")
             }
         }

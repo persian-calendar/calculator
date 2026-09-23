@@ -3,7 +3,6 @@ package io.github.persiancalendar.calculator
 import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.truncate
-import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 sealed interface Value {

@@ -1,58 +1,45 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    java
-    antlr
-    kotlin("jvm") version "2.3.0"
+    kotlin("multiplatform") version "2.4.20"
     `maven-publish`
 }
 
-group = "io.github.persiancalendar"
-version = "0.0.1"
+group = (findProperty("group") as? String) ?: "io.github.persiancalendar"
+version = (findProperty("version") as? String) ?: "0.0.1"
 
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    antlr("org.antlr:antlr4:4.13.2")
-    implementation("org.antlr:antlr4-runtime:4.13.2")
-    testImplementation(kotlin("test"))
-}
-
-// https://github.com/gradle/gradle/issues/820#issuecomment-808315335
-configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
-    apiConfiguration.setExtendsFrom(apiConfiguration.extendsFrom.filter { it.name != "antlr" })
-}
-
-tasks.generateGrammarSource {
-    maxHeapSize = "64m"
-    arguments = arguments + listOf("-no-listener", "-visitor", "-package", "io.github.persiancalendar.calculator.parser")
-    outputDirectory =
-        File("${project.layout.buildDirectory.get()}/generated-src/antlr/main/io/github/persiancalendar/calculator/parser")
-}
-tasks.named("compileKotlin").configure { dependsOn(tasks.generateGrammarSource) }
-
-tasks.test {
-    useJUnitPlatform()
-}
-
 kotlin {
     jvmToolchain(21)
-    compilerOptions { jvmTarget = JvmTarget.JVM_21 }
-}
 
-val sourceJar by tasks.registering(Jar::class) {
-    dependsOn(tasks["classes"])
-    archiveClassifier.set("sources")
-    from(sourceSets["main"].allSource)
-}
-
-publishing {
-    publications {
-        register("mavenJava", MavenPublication::class) {
-            from(components["kotlin"])
-            artifact(sourceJar)
+    jvm {
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_21
         }
+    }
+
+    js {
+        nodejs()
+        browser()
+    }
+
+    linuxArm64()
+    linuxX64()
+    macosArm64()
+    mingwX64()
+
+    sourceSets {
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
+    }
+}
+
+tasks.withType<org.gradle.api.tasks.testing.AbstractTestTask>().configureEach {
+    testLogging {
+        showStandardStreams = true
     }
 }
