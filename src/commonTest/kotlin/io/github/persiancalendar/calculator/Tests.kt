@@ -133,35 +133,27 @@ class Tests {
 
     @Test
     fun `test time calculator`() {
-        assertEquals(
-            """
-                0d 0h 0m 2s
-                2.3148148148148147E-5 d
-                5.555555555555556E-4 h
-                0.03333333333333333 m
-                2 s
-            """.trimIndent(),
-            eval("2s")
+        // Compare the numeric lines as doubles so the test doesn't depend on the platform's
+        // floating point formatting (JS prints small numbers as plain decimals instead of
+        // scientific notation).
+        fun check(input: String, breakdown: String, totalSeconds: Double) {
+            val lines = eval(input).lines()
+            assertEquals(breakdown, lines[0])
+            assertEquals(totalSeconds / 86400, lines[1].substringBefore(" d").toDouble(), 1e-12)
+            assertEquals(totalSeconds / 3600, lines[2].substringBefore(" h").toDouble(), 1e-12)
+            assertEquals(totalSeconds / 60, lines[3].substringBefore(" m").toDouble(), 1e-12)
+            assertEquals("${totalSeconds.toInt()} s", lines[4])
+        }
+        check("2s", "0d 0h 0m 2s", 2.0)
+        check(
+            "1d + 2h + 3m + 4s + 4h + 5s - 2030s + 28h",
+            "2d 9h 29m 19s",
+            206959.0
         )
-        assertEquals(
-            """
-                2d 9h 29m 19s
-                2.3953587962962963 d
-                57.48861111111111 h
-                3449.3166666666666 m
-                206959 s
-            """.trimIndent(),
-            eval("1d + 2h + 3m + 4s + 4h + 5s - 2030s + 28h")
-        )
-        assertEquals(
-            """
-                2d 9h 29m 19s
-                2.3953587962962963 d
-                57.48861111111111 h
-                3449.3166666666666 m
-                206959 s
-            """.trimIndent(),
-            eval("1d 2h 3m 4s + 4h 5s - 2030s + 28h")
+        check(
+            "1d 2h 3m 4s + 4h 5s - 2030s + 28h",
+            "2d 9h 29m 19s",
+            206959.0
         )
     }
 
