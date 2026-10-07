@@ -5,7 +5,7 @@ fun diff(f: Value, symbol: Value.Symbol): Value {
         is Value.Number -> Value.Number(0.0)
         is Value.Symbol -> Value.Number(if (f.name == symbol.name) 1.0 else 0.0)
         is Value.Expression -> {
-            when (f.function.name) {
+            when (val functionName = f.function.name) {
                 "+", "-" -> Value.Expression(
                     f.function,
                     f.arguments
@@ -56,32 +56,32 @@ fun diff(f: Value, symbol: Value.Symbol): Value {
                             diff(f.arguments[0], symbol)
                 }
                 "sqrt" -> {
-                    if (f.arguments.size != 1) error("Sqrt should have one argument")
+                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
                     Value.Number(.5) *
                             diff(f.arguments[0], symbol) /
                             Value.Symbol("sqrt")(f.arguments[0])
                 }
                 "ln" -> {
-                    if (f.arguments.size != 1) error("Sqrt should have one argument")
+                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
                     diff(f.arguments[0], symbol) / f.arguments[0]
                 }
                 "exp" -> {
-                    if (f.arguments.size != 1) error("Sqrt should have one argument")
+                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
                     Value.Symbol("exp")(f.arguments[0]) * diff(f.arguments[0], symbol)
                 }
                 "sin" -> {
-                    if (f.arguments.size != 1) error("Sqrt should have one argument")
+                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
                     Value.Symbol("cos")(f.arguments[0]) *
                             diff(f.arguments[0], symbol)
                 }
                 "cos" -> {
-                    if (f.arguments.size != 1) error("Sqrt should have one argument")
+                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
                     Value.Number(-1.0) *
                             Value.Symbol("sin")(f.arguments[0]) *
                             diff(f.arguments[0], symbol)
                 }
                 "tan" -> {
-                    if (f.arguments.size != 1) error("Sqrt should have one argument")
+                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
                     (Value.Number(1.0) +
                             (Value.Symbol("tan")(f.arguments[0]).pow(Value.Number(2.0)))
                             ) * diff(f.arguments[0], symbol)
