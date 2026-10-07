@@ -70,7 +70,7 @@ class Tests {
             ";" to "",
             ";;" to "",
             "sin(ln(x))" to "sin(ln(x))",
-            "2 *-2 +aa  * 2 + 2 -2 / -4" to "-4 + aa * 2 + 2 + 0.5",
+            "2 *-2 +aa  * 2 + 2 -2 / -4" to "-4 + 2 * aa + 2 + 0.5",
 
             "cbrt(8)" to "2",
             "expm1(0)" to "0",
@@ -97,9 +97,9 @@ class Tests {
             "x^23" to "23 * x ^ 22",
             "sqrt(x)" to "0.5 / sqrt(x)",
             "ln(x)" to "1 / x",
-            "ln(x^12)" to "12 * x ^ 11 / x ^ 12", // which simplifies as 12/x
+            "ln(x^12)" to "12 / x",
             "exp(x^25)" to "25 * (exp(x ^ 25) * x ^ 24)",
-            "sin(2 * x)" to "cos(2 * x) * 2",
+            "sin(2 * x)" to "2 * cos(2 * x)",
             "sin(cos(x))" to "-(cos(cos(x)) * sin(x))",
             "tan(cos(x))" to "-((1 + tan(cos(x)) ^ 2) * sin(x))",
             "x" to "1",
@@ -110,7 +110,7 @@ class Tests {
             "5*x" to "5",
             "x^3 + 2*x^2 - 4*x + 3" to "3 * x ^ 2 + 4 * x - 4",
             "sqrt(x^2 + 2)" to "x / sqrt(x ^ 2 + 2)",
-            "ln((1 + x)^3)" to "3 * (1 + x) ^ 2 / (1 + x) ^ 3",
+            "ln((1 + x)^3)" to "3 / (1 + x)",
 
             // unary minus
             "-x" to "-1",
@@ -174,12 +174,13 @@ class Tests {
             "asinh(x)" to "1 / sqrt(x ^ 2 + 1)",
             "acosh(x)" to "1 / sqrt(x ^ 2 - 1)",
 
-            "log2(x)" to "1 / (x * ${ln(2.0)})",
-            "log10(x)" to "1 / (x * ${ln(10.0)})",
+            "log2(x)" to "1 / (${ln(2.0)} * x)",
+            "log10(x)" to "1 / (${ln(10.0)} * x)",
         ).also {
             val inputs = it.map { it.first }
             assertEquals(inputs.size, inputs.toSet().size, "Duplicate inputs")
         }.forEach { (input, expected) ->
+            println(input)
             assertEquals(expected, eval("diff($input, x)"), input)
 //            // Check if expected is evaluable at all
 //            println(expected)

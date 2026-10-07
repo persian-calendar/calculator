@@ -75,14 +75,13 @@ internal sealed interface Value {
             if (precedence == 0) {
                 return "$name(${arguments.joinToString(", ") { it.renderAsArgument() }})"
             }
-
+            // "-1 * x" -> "-x"
             if (name == "*" && arguments.size == 2 && arguments[0] == Number(-1.0)) {
                 val inner = arguments[1]
                 val needsParens = inner is Expression && inner.precedence > 0
                 val body = inner.renderAsArgument()
                 return if (needsParens) "-($body)" else "-$body"
             }
-
             val body = when (arguments.size) {
                 0 -> "0"
                 1 -> if (name == "-") "(-${arguments[0].renderAsArgument()})"
@@ -126,6 +125,7 @@ internal sealed interface Value {
     fun renderAsArgument(): String = if (this is Expression) render(atRoot = true) else toString()
 
     operator fun plus(other: Value): Value {
+        // "1 + 2" -> "3"
         if (this is Number && other is Number) {
             if (unit == other.unit) return Number(value + other.value, unit)
             val thisSecondFactor = timeUnits[unit]
@@ -134,9 +134,11 @@ internal sealed interface Value {
                 error("This addition of units isn't supported")
             return Number(value * thisSecondFactor + other.value * otherSecondFactor, "s")
         }
+        // "0 + x" -> "x"
         if (this.isZero()) return other
+        // "x + 0" -> "x"
         if (other.isZero()) return this
-        // This folds two similar expressions
+        // "2*x + 3*x" -> "5*x"
         run {
             val (c1, t1) = coefficientTail()
             val (c2, t2) = other.coefficientTail()
@@ -146,16 +148,19 @@ internal sealed interface Value {
                 return t1.fold(Number(c), Value::times)
             }
         }
-        if (other is Number && other.value < 0.0 && other.unit == null) return Symbol("-")(
-            this, Number(-other.value)
-        )
+        // "a + (-b)" -> "a - b"
+        if (other is Number && other.value < 0.0 && other.unit == null) {
+            return Symbol("-")(this, Number(-other.value))
+        }
         return Symbol("+")(this, other)
     }
 
     operator fun minus(other: Value): Value {
+        // "x - 0" -> "x"
         if (other.isZero()) return this
+        // "x - x" -> "0"
         if (this == other) return Number(0.0)
-        // This turns "5x - 3x" into "2x"
+        // "5*x - 3*x" -> "2*x"
         run {
             val (c1, t1) = coefficientTail()
             val (c2, t2) = other.coefficientTail()
@@ -165,65 +170,79 @@ internal sealed interface Value {
                 return t1.fold(Number(c), Value::times)
             }
         }
-        // This turns "a - (-b)" into "a + b"
+        // "a - (-b)" -> "a + b"
         if (other is Number && other.value < 0.0 && other.unit == null) return this + Number(-other.value)
+        // "-x" -> "-1 * x"
         if (this !is Number || other !is Number) return Symbol("-")(this, other)
         return this + Number(-1.0) * other
     }
 
     operator fun unaryMinus(): Value = Number(-1.0) * this
 
-    private fun splitCoefficient(v: Value): Pair<Number?, List<Value>> = when (v) {
-        is Number -> v to emptyList()
-        is Expression -> if (v.function.name == "*" && v.arguments.firstOrNull() is Number) {
-            (v.arguments.first() as Number) to v.arguments.drop(1)
-        } else null to listOf(v)
-        else -> null to listOf(v)
+    /**
+     * Splits the value into (coefficient, remaining factors) when it looks like
+     * `Number * factor * factor * ...`. `Number` alone yields the number and
+     * an empty tail; anything else yields `null` and the whole value.
+     */
+    private fun splitCoefficient(): Pair<Number?, List<Value>> = when (this) {
+        is Number -> this to emptyList()
+        is Expression -> if (this.function.name == "*" && this.arguments.firstOrNull() is Number) {
+            (this.arguments.first() as Number) to this.arguments.drop(1)
+        } else null to listOf(this)
+
+        else -> null to listOf(this)
     }
 
+    /** Same as [splitCoefficient], but a missing coefficient is treated as `1`. */
     private fun coefficientTail(): Pair<Number, List<Value>> {
-        val (c, t) = splitCoefficient(this)
+        val (c, t) = this.splitCoefficient()
         return (c ?: Number(1.0)) to t
     }
 
     operator fun times(other: Value): Value {
+        // "2 * 3" -> "6"
         if (this is Number && other is Number) {
             if (unit != null && other.unit != null) error("Two numbers with unit are multiplied")
             return Number(value * other.value, unit ?: other.unit)
         }
+        // "0 * x" -> "0"
         if (this.isZero() || other.isZero()) return Number(0.0)
+        // "1 * x" -> "x"
         if (this.isOne()) return other
+        // "x * 1" -> "x"
         if (other.isOne()) return this
-        // This turns "x * x" to "x^2"
+        // "x * x" -> "x ^ 2"
         if (this == other) return this.pow(Number(2.0))
-        // This turns "x^m * x^n" to "x^(m+n)"
+        // "x^m * x^n" -> "x ^ (m + n)"
         if (this is Expression && this.function.name == "^" && other is Expression && other.function.name == "^" && this.arguments[0] == other.arguments[0]) {
             val e1 = this.arguments[1]
             val e2 = other.arguments[1]
             if (e1 is Number && e2 is Number) return this.arguments[0].pow(Number(e1.value + e2.value))
         }
-        // This turns "x * x^n" to "x^(n+1)"
+        // "x * x^n" -> "x ^ (n + 1)"
         if (other is Expression && other.function.name == "^" && other.arguments[0] == this) {
             val e = other.arguments[1]
             if (e is Number) return this.pow(Number(e.value + 1))
         }
-        // This turns "x^n * x" to "x^(n+1)"
+        // "x^n * x" -> "x ^ (n + 1)"
         if (this is Expression && this.function.name == "^" && this.arguments[0] == other) {
             val e = this.arguments[1]
             if (e is Number) return other.pow(Number(e.value + 1))
         }
-
-        // This turns "5x - 3x" into "2x"
-        val (c1, r1) = splitCoefficient(this)
-        val (c2, r2) = splitCoefficient(other)
+        // "(2 * x) * (3 * y)" -> "6 * (x * y)"
+        val (c1, r1) = this.splitCoefficient()
+        val (c2, r2) = other.splitCoefficient()
         if (c1 != null && c2 != null) {
             val folded = c1 * c2
             val rest = r1 + r2
             return rest.fold(folded, Value::times)
         }
-        // This brings out the coefficient
+        // "x * (2 * y)" -> "2 * (x * y)"
         if (c1 == null && c2 != null && r2.size == 1) return c2 * (this * r2[0])
+        // "(2 * x) * y" -> "2 * (x * y)"
         if (c2 == null && c1 != null && r1.size == 1) return c1 * (other * r1[0])
+        // "x * 2" -> "2 * x"
+        if (other is Number && this !is Number) return Symbol("*")(other, this)
         return Symbol("*")(this, other)
     }
 
@@ -234,6 +253,7 @@ internal sealed interface Value {
         this is Number && value == 1.0 && unit == null
 
     operator fun div(other: Value): Value {
+        // "1 / 2" -> "0.5"
         if (this is Number && other is Number) {
             val resultUnit = when {
                 unit == other.unit -> null
@@ -243,8 +263,61 @@ internal sealed interface Value {
             }
             return Number(value / other.value, resultUnit)
         }
+        // "x / x" -> "1"
         if (this == other) return Number(1.0)
+        // "0 / x" -> "0"
         if (this.isZero()) return Number(0.0)
+        // "x^m / x^n" -> "x ^ (m - n)"
+        if (this is Expression && this.function.name == "^" && other is Expression && other.function.name == "^" && this.arguments[0] == other.arguments[0]) {
+            val e1 = this.arguments[1]
+            val e2 = other.arguments[1]
+            if (e1 is Number && e2 is Number) {
+                val exp = e1.value - e2.value
+                if (exp == 0.0) return Number(1.0)
+                if (exp < 0.0) return Number(1.0) / this.arguments[0].pow(Number(-exp))
+                return this.arguments[0].pow(Number(exp))
+            }
+        }
+        // "x / x^n" -> "1 / x ^ (n - 1)"
+        if (other is Expression && other.function.name == "^" && other.arguments[0] == this) {
+            val e = other.arguments[1]
+            if (e is Number) {
+                val exp = 1 - e.value
+                if (exp == 0.0) return Number(1.0)
+                if (exp < 0.0) return Number(1.0) / this.pow(Number(-exp))
+                return this.pow(Number(exp))
+            }
+        }
+        // "x^n / x" -> "x ^ (n - 1)"
+        if (this is Expression && this.function.name == "^" && this.arguments[0] == other) {
+            val e = this.arguments[1]
+            if (e is Number) {
+                val exp = e.value - 1
+                if (exp == 0.0) return Number(1.0)
+                if (exp < 0.0) return Number(1.0) / other.pow(Number(-exp))
+                return other.pow(Number(exp))
+            }
+        }
+        // Coefficient extraction
+        // "(c * f) / g" -> "c * (f / g)" when f/g changes shape,
+        // otherwise fall through so we don't rebuild the input.
+        val (c1, r1) = this.splitCoefficient()
+        if (c1 != null && r1.size == 1 && other.splitCoefficient().first == null) {
+            val tail = r1[0]
+            val simplified = tail / other
+            val trivialWrap =
+                simplified is Expression && simplified.function.name == "/" && simplified.arguments == listOf<Value>(
+                    tail, other
+                )
+            if (!trivialWrap) {
+                // "(c * f) / g" -> "(c * f') / g'" when f/g = f'/g'
+                if (simplified is Expression && simplified.function.name == "/") {
+                    val (num, den) = simplified.arguments
+                    return (c1 * num) / den
+                }
+                return c1 * simplified
+            }
+        }
         return Symbol("/")(this, other)
     }
 
@@ -254,7 +327,9 @@ internal sealed interface Value {
     }
 
     fun pow(other: Value): Value {
+        // "x ^ 0" -> "1"
         if (other is Number && other.value == 0.0) return Number(1.0)
+        // "x ^ 1" -> "x"
         if (other is Number && other.value == 1.0) return this
         if (this !is Number || other !is Number) return Symbol("^")(this, other)
         return Number(value.pow(other.value))
