@@ -70,6 +70,15 @@ class Tests {
             ";;" to "",
             "sin(ln(x))" to "sin(ln(x))",
             "2 *-2 +aa  * 2 + 2 -2 / -4" to "(((-4 + (aa * 2)) + 2) - -0.5)",
+
+            "cbrt(8)" to "2",
+            "expm1(0)" to "0",
+            "ln1p(0)" to "0",
+            "log2(8)" to "3",
+            "log10(1000)" to "3",
+            "withSign(5, -1)" to "-5",
+            "atanh(0)" to "0",
+            "asinh(0)" to "0",
         ).forEach { (input, expected) ->
             assertEquals(expected, eval(input), input)
         }
@@ -82,7 +91,7 @@ class Tests {
             "x - c + 1" to "1",
             "-x - c + 1" to "-1",
             "x * x" to "(x + x)",
-            "2 * x * x" to "((2 * x) + (x * 2))",
+            "2 * x * x" to "((2 * x) + (2 * x))",
             "x / 2" to "0.5",
             "x^23" to "(23 * (x ^ 22))",
             "sqrt(x)" to "(0.5 / sqrt(x))",
@@ -98,10 +107,78 @@ class Tests {
             "x+7" to "1",
             "x*5" to "5",
             "5*x" to "5",
-            "x^3 + 2*x^2 - 4*x + 3" to "(((3 * (x ^ 2)) + (2 * (2 * (x ^ 1)))) + 4)",
+            "x^3 + 2*x^2 - 4*x + 3" to "(((3 * (x ^ 2)) + (2 * (2 * (x ^ 1)))) - 4)",
             "sqrt(x^2 + 2)" to "((0.5 * (2 * (x ^ 1))) / sqrt(((x ^ 2) + 2)))",
             "ln((1 + x)^3)" to "((3 * ((1 + x) ^ 2)) / ((1 + x) ^ 3))",
-        ).forEach { (input, expected) ->
+
+            // unary minus
+            "-x" to "-1",
+            "--x" to "1",
+            "-2*x" to "-2",
+            "-2 * x + 3" to "-2",
+            "-(x + 1)" to "-1",
+            "-(x^2)" to "(-1 * (2 * (x ^ 1)))",
+            "-sin(x)" to "(-1 * cos(x))",
+            "-cos(x)" to "(-1 * (-1 * sin(x)))", // because -(-1 * sin(x)) = sin(x)
+            "-ln(x)" to "(-1 * (1 / x))", // du/u with du = -1
+            "-exp(x)" to "(-1 * exp(x))",
+            "-sqrt(x)" to "(-1 * (0.5 / sqrt(x)))",
+
+            // subtraction must not be treated as addition
+            "x - x" to "0",
+            "x - 2*x" to "-1",
+            "3*x - x" to "2",
+            "2*x - 2*x" to "0",
+            "x^2 - x^2" to "0",
+
+            "1 / x" to "(-1 / (x ^ 2))",
+            "2 / x" to "(-2 / (x ^ 2))",
+            "x / x" to "(0 / (x ^ 2))",
+            "x^2 / x" to "(((x * (2 * (x ^ 1))) - (x ^ 2)) / (x ^ 2))",
+
+            "x^0" to "0",
+            "x^1" to "1",
+            "x^2" to "(2 * (x ^ 1))",
+            "2^x" to "((2 ^ x) * ln(2))",
+            "x^x" to "((x ^ x) * (ln(x) + (x / x)))",
+
+            "cot(x)" to "(-1 * (1 + (cot(x) ^ 2)))",
+            "asin(x)" to "(1 / sqrt((1 - (x ^ 2))))",
+            "acos(x)" to "(-1 / sqrt((1 - (x ^ 2))))",
+            "atan(x)" to "(1 / (1 + (x ^ 2)))",
+            "sinh(x)" to "cosh(x)",
+            "cosh(x)" to "sinh(x)",
+            "tanh(x)" to "(1 - (tanh(x) ^ 2))",
+            "abs(x)" to "sign(x)",
+            "sign(x)" to "0",
+            "floor(x)" to "0",
+            "ceil(x)" to "0",
+
+            "log(x, 2)" to "(((1 / x) * ln(2)) / (ln(2) ^ 2))",
+            "atan2(x, 1)" to "(1 / (1 + (x ^ 2)))",
+            "hypot(x, 1)" to "(x / hypot(x, 1))",
+
+            "x^3" to "(3 * (x ^ 2))",
+            "diff(x^3, x)" to "(3 * (2 * (x ^ 1)))",
+            "diff(diff(x^3, x), x)" to "6",
+
+            // chain cases
+            "sin(x^2)" to "(cos((x ^ 2)) * (2 * (x ^ 1)))",
+            "exp(sin(x))" to "(exp(sin(x)) * cos(x))",
+            "ln(cos(x))" to "((-1 * sin(x)) / cos(x))",
+
+            "cbrt(x)" to "(1 / (3 * (cbrt(x) ^ 2)))",
+            "expm1(x)" to "exp(x)",
+            "ln1p(x)" to "(1 / (1 + x))",
+            "asinh(x)" to "(1 / sqrt(((x ^ 2) + 1)))",
+            "acosh(x)" to "(1 / sqrt(((x ^ 2) - 1)))",
+
+            "log2(x)" to "(1 / (x * 0.6931471805599453))",
+            "log10(x)" to "(1 / (x * 2.302585092994046))",
+        ).also {
+            val inputs = it.map { it.first }
+            assertEquals(inputs.size, inputs.toSet().size, "Duplicate inputs")
+        }.forEach { (input, expected) ->
             assertEquals(expected, eval("diff($input, x)"), input)
         }
     }

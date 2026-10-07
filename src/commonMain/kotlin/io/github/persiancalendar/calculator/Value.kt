@@ -87,9 +87,13 @@ sealed interface Value {
     }
 
     operator fun minus(other: Value): Value {
+        if (other.isZero()) return this
+        if (this == other) return Number(0.0)
         if (this !is Number || other !is Number) return Symbol("-")(this, other)
         return this + Number(-1.0) * other
     }
+
+    operator fun unaryMinus(): Value = Number(-1.0) * this
 
     operator fun times(other: Value): Value {
         if (this is Number && other is Number) {
@@ -126,6 +130,7 @@ sealed interface Value {
     }
 
     fun pow(other: Value): Value {
+        if (other is Number && other.value == .0) return Number(1.0)
         if (this !is Number || other !is Number) return Symbol("^")(this, other)
         return Number(value.pow(other.value))
     }

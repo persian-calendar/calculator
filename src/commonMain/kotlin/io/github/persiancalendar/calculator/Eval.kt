@@ -10,14 +10,19 @@ import kotlin.math.asinh
 import kotlin.math.atan
 import kotlin.math.atan2
 import kotlin.math.atanh
+import kotlin.math.cbrt
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.cosh
 import kotlin.math.exp
+import kotlin.math.expm1
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.ln
+import kotlin.math.ln1p
 import kotlin.math.log
+import kotlin.math.log10
+import kotlin.math.log2
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -29,6 +34,7 @@ import kotlin.math.sqrt
 import kotlin.math.tan
 import kotlin.math.tanh
 import kotlin.math.truncate
+import kotlin.math.withSign
 
 private fun degOrRadFunction(
     name: String,
@@ -69,34 +75,60 @@ private fun unaryFunction(
     }, 1)
 }
 
-private fun binaryFunction(action: (Double, Double) -> Double): Value.Function {
-    return Value.Function({
-        val (x, y) = it
-        if ((x as Value.Number).unit != null || (y as Value.Number).unit != null)
-            error("this binary function only accepts numbers without unit")
-        Value.Number(action(x.value, y.value))
-    }, 2)
-}
+private fun binaryFunction(
+    name: String,
+    action: (Double, Double) -> Double,
+): Pair<String, Value.Function> = name to Value.Function({ args ->
+    val (x, y) = args
+    if (x is Value.Number && y is Value.Number && x.unit == null && y.unit == null) Value.Number(
+        action(x.value, y.value)
+    )
+    else Value.Expression(Value.Symbol(name), args)
+}, 2)
 
 private val constants = mapOf(
-    "PI" to Value.Number(PI), "E" to Value.Number(E),
-    degOrRadFunction("sin", ::sin), degOrRadFunction("cos", ::cos),
-    degOrRadFunction("tan", ::tan), degOrRadFunction("cot") { 1 / tan(it) },
-    unaryFunction("asin", ::asin), unaryFunction("acos", ::acos),
-    unaryFunction("atan", ::atan), "atan2" to binaryFunction(::atan2),
-    unaryFunction("sinh", ::sinh), unaryFunction("cosh", ::cosh),
-    unaryFunction("tanh", ::tanh), unaryFunction("asinh", ::asinh),
-    unaryFunction("acosh", ::acosh), unaryFunction("asinh", ::atanh),
-    "hypot" to binaryFunction(::hypot), unaryFunction("sqrt", ::sqrt),
-    unaryFunction("exp", ::exp), "log" to binaryFunction(::log), unaryFunction("ln", ::ln),
-    unaryFunction("ceil", ::ceil), unaryFunction("floor", ::floor),
-    unaryFunction("truncate", ::truncate), unaryFunction("round", ::round),
-    unaryFunction("abs", ::abs), unaryFunction("sign", ::sign),
-    "min" to binaryFunction(::min), "max" to binaryFunction(::max),
-    "+" to binaryFunction { x, y -> x + y }, "-" to binaryFunction { x, y -> x - y },
-    "*" to binaryFunction { x, y -> x * y }, "/" to binaryFunction { x, y -> x / y },
-    "%" to binaryFunction { x, y -> x % y },
-    "^" to binaryFunction { x, y -> x.pow(y) }, "**" to binaryFunction { x, y -> x.pow(y) },
+    "PI" to Value.Number(PI),
+    "E" to Value.Number(E),
+    degOrRadFunction("sin", ::sin),
+    degOrRadFunction("cos", ::cos),
+    degOrRadFunction("tan", ::tan),
+    degOrRadFunction("cot") { 1 / tan(it) },
+    unaryFunction("asin", ::asin),
+    unaryFunction("acos", ::acos),
+    unaryFunction("atan", ::atan),
+    binaryFunction("atan2", ::atan2),
+    unaryFunction("sinh", ::sinh),
+    unaryFunction("cosh", ::cosh),
+    unaryFunction("tanh", ::tanh),
+    unaryFunction("asinh", ::asinh),
+    unaryFunction("acosh", ::acosh),
+    unaryFunction("atanh", ::atanh),
+    binaryFunction("hypot", ::hypot),
+    unaryFunction("sqrt", ::sqrt),
+    unaryFunction("exp", ::exp),
+    binaryFunction("log", ::log),
+    unaryFunction("ln", ::ln),
+    unaryFunction("ceil", ::ceil),
+    unaryFunction("floor", ::floor),
+    unaryFunction("truncate", ::truncate),
+    unaryFunction("round", ::round),
+    unaryFunction("abs", ::abs),
+    unaryFunction("sign", ::sign),
+    binaryFunction("min", ::min),
+    binaryFunction("max", ::max),
+    binaryFunction("+") { x, y -> x + y },
+    binaryFunction("-") { x, y -> x - y },
+    binaryFunction("*") { x, y -> x * y },
+    binaryFunction("/") { x, y -> x / y },
+    binaryFunction("%") { x, y -> x % y },
+    binaryFunction("^") { x, y -> x.pow(y) },
+    binaryFunction("**") { x, y -> x.pow(y) },
+    unaryFunction("cbrt", ::cbrt),
+    unaryFunction("expm1", ::expm1),
+    unaryFunction("ln1p", ::ln1p),
+    unaryFunction("log10", ::log10),
+    unaryFunction("log2", ::log2),
+    binaryFunction("withSign") { x, y -> x.withSign(y) },
     "diff" to Value.Function({ diff(it[0], it[1] as Value.Symbol) }),
 )
 
@@ -181,7 +213,7 @@ private fun tokenize(input: String): List<Token> {
             }
             c.isLetter() || c == '_' -> {
                 val start = i
-                while (i < n && (input[i].isLetter() || input[i] == '_')) i++
+                while (i < n && (input[i].isLetterOrDigit() || input[i] == '_')) i++
                 tokens += Token(TokenType.SYMBOL, input.substring(start, i), start)
             }
             else -> error("Unexpected character '$c' at $i")
