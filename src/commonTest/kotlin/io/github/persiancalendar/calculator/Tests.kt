@@ -98,7 +98,7 @@ class Tests {
             "sqrt(x)" to "0.5 / sqrt(x)",
             "ln(x)" to "1 / x",
             "ln(x^12)" to "12 / x",
-            "exp(x^25)" to "25 * (exp(x ^ 25) * x ^ 24)",
+            "exp(x^25)" to "25 * exp(x ^ 25) * x ^ 24",
             "sin(2 * x)" to "2 * cos(2 * x)",
             "sin(cos(x))" to "-cos(cos(x)) * sin(x)",
             "tan(cos(x))" to "-(1 + tan(cos(x)) ^ 2) * sin(x)",
@@ -121,9 +121,9 @@ class Tests {
             "-(x^2)" to "-2 * x",
             "-sin(x)" to "-cos(x)",
             "-cos(x)" to "sin(x)",
-            "-ln(x)" to "-(1 / x)", // du/u with du = -1
+            "-ln(x)" to "-1 / x", // du/u with du = -1
             "-exp(x)" to "-exp(x)",
-            "-sqrt(x)" to "-(0.5 / sqrt(x))",
+            "-sqrt(x)" to "-0.5 / sqrt(x)",
 
             // subtraction must not be treated as addition
             "x - x" to "0",
@@ -164,7 +164,7 @@ class Tests {
             "diff(diff(x^3, x), x)" to "6",
 
             // chain rule
-            "sin(x^2)" to "2 * (cos(x ^ 2) * x)",
+            "sin(x^2)" to "2 * cos(x ^ 2) * x",
             "exp(sin(x))" to "exp(sin(x)) * cos(x)",
             "ln(cos(x))" to "-sin(x) / cos(x)",
 

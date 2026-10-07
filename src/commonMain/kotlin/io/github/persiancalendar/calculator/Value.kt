@@ -71,13 +71,22 @@ internal sealed interface Value {
                 return "$name(${arguments.joinToString(", ") { it.renderAsArgument() }})"
             }
             // "-1 * x" -> "-x"
-            // "-1 * (a * b)" -> "-a * b" (parens unnecessary: reparses to the same tree)
-            if (name == "*" && arguments.size == 2 && arguments[0] == Number(-1.0)) {
-                val inner = arguments[1]
-                val needsParens =
-                    inner is Expression && inner.thisOperator != null && inner.function.name != "*"
-                val body = inner.renderAsArgument()
-                return if (needsParens) "-($body)" else "-$body"
+            // "-1 * (a * b)" -> "-a * b"
+            // "-1 * (a / b)" -> "-a / b"
+            // "-1 * (a + b)" -> "-(a + b)"
+            // "-1 * (a ^ b)" -> "-(a ^ b)"
+            if (name == "*" && arguments.size >= 2 && arguments[0] == Number(-1.0)) {
+                val rest = arguments.drop(1)
+                val body = rest.joinToString(" * ") { arg ->
+                    when (arg) {
+                        is Expression if arg.thisOperator != null && arg.function.name != "*" && arg.function.name != "/" ->
+                            "(${arg.renderAsArgument()})"
+
+                        is Expression -> arg.renderAsArgument()
+                        else -> arg.toString()
+                    }
+                }
+                return "-$body"
             }
             val body = when (arguments.size) {
                 0 -> "0"
@@ -235,7 +244,31 @@ internal sealed interface Value {
         // "x * (2 * y)" -> "2 * (x * y)"
         if (c1 == null && c2 != null && r2.size == 1) return c2 * (this * r2[0])
         // "(2 * x) * y" -> "2 * (x * y)"
-        if (c2 == null && c1 != null && r1.size == 1) return c1 * (other * r1[0])
+        if (c2 == null && c1 != null && r1.size == 1) return c1 * (r1[0] * other)
+        // "(-1 * a * b) * c" -> "-1 * a * b * c"
+        if (c1 != null && r1.size > 1) return Expression(
+            Symbol("*"), listOf(c1) + r1 + listOf(other)
+        )
+        // "f * (2 * g * h)" -> "2 * f * g * h"
+        if (c2 != null && r2.size > 1) return Expression(
+            Symbol("*"), listOf(c2, this) + r2
+        )
+
+        // "c * (f * g)" -> "c * f * g"
+        // "(f * g) * c" -> "c * f * g"
+        // "(f * g) * (h * i)" -> "f * g * h * i"
+        val thisFlat = (this as? Expression)?.takeIf {
+            it.function.name == "*" && it.arguments.firstOrNull() !is Number
+        }?.arguments
+        val otherFlat = (other as? Expression)?.takeIf {
+            it.function.name == "*" && it.arguments.firstOrNull() !is Number
+        }?.arguments
+        if (thisFlat != null || otherFlat != null) {
+            val combined = (thisFlat ?: listOf(this)) + (otherFlat ?: listOf(other))
+            val (numbers, rest) = combined.partition { it is Number }
+            return Expression(Symbol("*"), numbers + rest)
+        }
+
         // "x * 2" -> "2 * x"
         if (other is Number && this !is Number) return Symbol("*")(other, this)
         return Symbol("*")(this, other)
