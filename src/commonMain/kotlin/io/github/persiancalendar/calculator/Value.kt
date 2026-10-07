@@ -5,7 +5,7 @@ import kotlin.math.pow
 import kotlin.math.truncate
 import kotlin.reflect.KProperty
 
-sealed interface Value {
+internal sealed interface Value {
     object Null : Value
 
     data class Symbol(val name: String) : Value {
@@ -59,28 +59,63 @@ sealed interface Value {
             "(${values.joinToString(", ", transform = Value::toString)})"
     }
     data class Expression(val function: Symbol, val arguments: List<Value>) : Value {
-        override fun toString(): String = toString(root = false)
+        // Zero if it isn't an operator
+        private val precedence = when (function.name) {
+            "+", "-" -> 1
+            "*", "/", "%" -> 2
+            "^", "**" -> 3
+            else -> 0
+        }
 
-        fun toString(root: Boolean): String {
-            val body = when (function.name) {
-                in operators -> when (arguments.size) {
-                    0 -> "0"
-                    1 -> if (function.name == "-") "(-${arguments[0]})" else arguments[0].toString()
-                    else -> arguments.joinToString(" ${function.name} ")
+        override fun toString(): String = render(atRoot = false)
+
+        fun render(atRoot: Boolean): String {
+            val name = function.name
+            if (precedence == 0) {
+                return "$name(${arguments.joinToString(", ") { it.renderAsArgument() }})"
+            }
+            val body = when (arguments.size) {
+                0 -> "0"
+                1 -> if (name == "-") "(-${arguments[0].renderAsArgument()})"
+                else arguments[0].renderAsArgument()
+
+                else -> {
+                    val rightAssoc = isRightAssociative(name)
+                    arguments.mapIndexed { i, arg ->
+                        when (arg) {
+                            is Expression -> arg.renderAsOperand(
+                                parentPrecedence = precedence,
+                                parentRightAssoc = rightAssoc,
+                                isFirst = i == 0,
+                                isLast = i == arguments.lastIndex,
+                            )
+
+                            else -> arg.toString()
+                        }
+
+                    }.joinToString(" $name ")
                 }
-                else -> "${function.name}(${arguments.joinToString(", ")})"
             }
-            return when {
-                root && function.name in operators -> body
-                function.name in operators -> "($body)"
-                else -> body
-            }
+            return if (atRoot) body else "($body)"
         }
 
-        companion object {
-            private val operators = setOf("+", "-", "/", "*", "%", "**", "^")
+        fun renderAsOperand(
+            parentPrecedence: Int,
+            parentRightAssoc: Boolean,
+            isFirst: Boolean,
+            isLast: Boolean,
+        ): String {
+            if (precedence == 0) return render(atRoot = true) // function call, `f(...)` groups itself
+            val needsParens =
+                precedence < parentPrecedence || (precedence == parentPrecedence && ((isFirst && parentRightAssoc) || (isLast && !parentRightAssoc)))
+            val body = render(atRoot = true)
+            return if (needsParens) "($body)" else body
         }
+
+        private fun isRightAssociative(name: String): Boolean = name == "^" || name == "**"
     }
+
+    fun renderAsArgument(): String = if (this is Expression) render(atRoot = true) else toString()
 
     operator fun plus(other: Value): Value {
         if (this is Number && other is Number) {

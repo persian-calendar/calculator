@@ -2,7 +2,7 @@ package io.github.persiancalendar.calculator
 
 import kotlin.math.ln
 
-fun diff(f: Value, symbol: Value.Symbol): Value {
+internal fun diff(f: Value, symbol: Value.Symbol): Value {
     return when (f) {
         is Value.Number -> Value.Number(0.0)
         is Value.Symbol -> Value.Number(if (f.name == symbol.name) 1.0 else 0.0)
