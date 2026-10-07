@@ -78,9 +78,8 @@ internal sealed interface Value {
 
             if (name == "*" && arguments.size == 2 && arguments[0] == Number(-1.0)) {
                 val inner = arguments[1]
-                val body =
-                    if (inner is Expression) inner.render(atRoot = true) else inner.toString()
                 val needsParens = inner is Expression && inner.precedence > 0
+                val body = inner.renderAsArgument()
                 return if (needsParens) "-($body)" else "-$body"
             }
 
@@ -137,6 +136,16 @@ internal sealed interface Value {
         }
         if (this.isZero()) return other
         if (other.isZero()) return this
+        // This folds two similar expressions
+        run {
+            val (c1, t1) = coefficientTail()
+            val (c2, t2) = other.coefficientTail()
+            if (t1 == t2 && t1.isNotEmpty()) {
+                val c = c1.value + c2.value
+                if (c == 0.0) return Number(0.0)
+                return t1.fold(Number(c), Value::times)
+            }
+        }
         if (other is Number && other.value < 0.0 && other.unit == null) return Symbol("-")(
             this, Number(-other.value)
         )
@@ -146,6 +155,17 @@ internal sealed interface Value {
     operator fun minus(other: Value): Value {
         if (other.isZero()) return this
         if (this == other) return Number(0.0)
+        // This turns "5x - 3x" into "2x"
+        run {
+            val (c1, t1) = coefficientTail()
+            val (c2, t2) = other.coefficientTail()
+            if (t1 == t2 && t1.isNotEmpty()) {
+                val c = c1.value - c2.value
+                if (c == 0.0) return Number(0.0)
+                return t1.fold(Number(c), Value::times)
+            }
+        }
+        // This turns "a - (-b)" into "a + b"
         if (other is Number && other.value < 0.0 && other.unit == null) return this + Number(-other.value)
         if (this !is Number || other !is Number) return Symbol("-")(this, other)
         return this + Number(-1.0) * other
@@ -155,12 +175,15 @@ internal sealed interface Value {
 
     private fun splitCoefficient(v: Value): Pair<Number?, List<Value>> = when (v) {
         is Number -> v to emptyList()
-        is Expression -> {
-            if (v.function.name == "*" && v.arguments.firstOrNull() is Number)
-                (v.arguments.first() as Number) to v.arguments.drop(1)
-            else null to listOf(v)
-        }
+        is Expression -> if (v.function.name == "*" && v.arguments.firstOrNull() is Number) {
+            (v.arguments.first() as Number) to v.arguments.drop(1)
+        } else null to listOf(v)
         else -> null to listOf(v)
+    }
+
+    private fun coefficientTail(): Pair<Number, List<Value>> {
+        val (c, t) = splitCoefficient(this)
+        return (c ?: Number(1.0)) to t
     }
 
     operator fun times(other: Value): Value {
@@ -171,16 +194,36 @@ internal sealed interface Value {
         if (this.isZero() || other.isZero()) return Number(0.0)
         if (this.isOne()) return other
         if (other.isOne()) return this
+        // This turns "x * x" to "x^2"
+        if (this == other) return this.pow(Number(2.0))
+        // This turns "x^m * x^n" to "x^(m+n)"
+        if (this is Expression && this.function.name == "^" && other is Expression && other.function.name == "^" && this.arguments[0] == other.arguments[0]) {
+            val e1 = this.arguments[1]
+            val e2 = other.arguments[1]
+            if (e1 is Number && e2 is Number) return this.arguments[0].pow(Number(e1.value + e2.value))
+        }
+        // This turns "x * x^n" to "x^(n+1)"
+        if (other is Expression && other.function.name == "^" && other.arguments[0] == this) {
+            val e = other.arguments[1]
+            if (e is Number) return this.pow(Number(e.value + 1))
+        }
+        // This turns "x^n * x" to "x^(n+1)"
+        if (this is Expression && this.function.name == "^" && this.arguments[0] == other) {
+            val e = this.arguments[1]
+            if (e is Number) return other.pow(Number(e.value + 1))
+        }
 
-        // Coefficient folding
+        // This turns "5x - 3x" into "2x"
         val (c1, r1) = splitCoefficient(this)
         val (c2, r2) = splitCoefficient(other)
         if (c1 != null && c2 != null) {
-            val folded = c1 * c2            // Number * Number, respects units
+            val folded = c1 * c2
             val rest = r1 + r2
             return rest.fold(folded, Value::times)
         }
-
+        // This brings out the coefficient
+        if (c1 == null && c2 != null && r2.size == 1) return c2 * (this * r2[0])
+        if (c2 == null && c1 != null && r1.size == 1) return c1 * (other * r1[0])
         return Symbol("*")(this, other)
     }
 
