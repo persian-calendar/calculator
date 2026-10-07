@@ -58,6 +58,7 @@ internal sealed interface Value {
         override fun toString(): String =
             "(${values.joinToString(", ", transform = Value::toString)})"
     }
+
     data class Expression(val function: Symbol, val arguments: List<Value>) : Value {
         // Zero if it isn't an operator
         private val precedence = when (function.name) {
@@ -71,19 +72,18 @@ internal sealed interface Value {
 
         fun render(atRoot: Boolean): String {
             val name = function.name
-            if (name == "*" && arguments.size == 2 && arguments[0] == Number(-1.0)) {
-                val x = arguments[1]
-                val inner = if (x is Expression) x.renderAsOperand(
-                    parentPrecedence = 4, // tighter than any infix op
-                    parentRightAssoc = false,
-                    isFirst = true,
-                    isLast = true,
-                ) else x.toString()
-                return "-$inner"
-            }
             if (precedence == 0) {
                 return "$name(${arguments.joinToString(", ") { it.renderAsArgument() }})"
             }
+
+            if (name == "*" && arguments.size == 2 && arguments[0] == Number(-1.0)) {
+                val inner = arguments[1]
+                val body =
+                    if (inner is Expression) inner.render(atRoot = true) else inner.toString()
+                val needsParens = inner is Expression && inner.precedence > 0
+                return if (needsParens) "-($body)" else "-$body"
+            }
+
             val body = when (arguments.size) {
                 0 -> "0"
                 1 -> if (name == "-") "(-${arguments[0].renderAsArgument()})"
@@ -102,7 +102,6 @@ internal sealed interface Value {
 
                             else -> arg.toString()
                         }
-
                     }.joinToString(" $name ")
                 }
             }
@@ -115,7 +114,7 @@ internal sealed interface Value {
             isFirst: Boolean,
             isLast: Boolean,
         ): String {
-            if (precedence == 0) return render(atRoot = true) // function call, `f(...)` groups itself
+            if (precedence == 0) return render(atRoot = true)
             val needsParens =
                 precedence < parentPrecedence || (precedence == parentPrecedence && ((isFirst && parentRightAssoc) || (isLast && !parentRightAssoc)))
             val body = render(atRoot = true)
@@ -138,12 +137,16 @@ internal sealed interface Value {
         }
         if (this.isZero()) return other
         if (other.isZero()) return this
+        if (other is Number && other.value < 0.0 && other.unit == null) return Symbol("-")(
+            this, Number(-other.value)
+        )
         return Symbol("+")(this, other)
     }
 
     operator fun minus(other: Value): Value {
         if (other.isZero()) return this
         if (this == other) return Number(0.0)
+        if (other is Number && other.value < 0.0 && other.unit == null) return this + Number(-other.value)
         if (this !is Number || other !is Number) return Symbol("-")(this, other)
         return this + Number(-1.0) * other
     }
@@ -197,8 +200,8 @@ internal sealed interface Value {
             }
             return Number(value / other.value, resultUnit)
         }
-        if (this == other) return Number(1.0)   // symbolic x/x = 1
-        if (this.isZero()) return Number(0.0)   // 0 / symbolic = 0
+        if (this == other) return Number(1.0)
+        if (this.isZero()) return Number(0.0)
         return Symbol("/")(this, other)
     }
 
