@@ -106,12 +106,11 @@ private fun integratePower(f: Value.Expression, symbol: Value.Symbol): Value {
     // "u ^ n" -> "u ^ (n + 1) / ((n + 1) * u')"
     val nextN = n + 1
     val c = nextN * du.value
-    // "u ^ -n" -> "1 / (c * u ^ (n - 1))" for n >= 2
+    // "u ^ -n" -> "(1/c) / u ^ (n - 1)" for n >= 2
     if (nextN < 0) return Value.Number(1.0 / c) / base.pow(Value.Number(-nextN))
     return base.pow(Value.Number(nextN)) / Value.Number(c)
 }
 
-/** Table of antiderivatives, one entry per unary function we can invert. */
 private val antiderivatives = mapOf<String, (u: Value) -> Value>(
     "sin" to { u -> -Value.Symbol("cos")(u) },
     "cos" to { u -> Value.Symbol("sin")(u) },
