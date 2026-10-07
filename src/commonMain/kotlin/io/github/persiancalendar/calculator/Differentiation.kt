@@ -29,41 +29,30 @@ fun diff(f: Value, symbol: Value.Symbol): Value {
                             (f.arguments[0].pow(Value.Number(exponent.value - 1))) *
                             diff(f.arguments[0], symbol)
                 }
-                "sqrt" -> {
+                else -> {
+                    if (functionName !in unaryDerivatives) error("Not supported function to differentiate $f")
                     if (f.arguments.size != 1) error("'$functionName' should have one argument")
-                    Value.Number(.5) *
-                            diff(f.arguments[0], symbol) /
-                            Value.Symbol("sqrt")(f.arguments[0])
+                    chain(f.arguments[0], symbol, unaryDerivatives.getValue(functionName))
                 }
-                "ln" -> {
-                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
-                    diff(f.arguments[0], symbol) / f.arguments[0]
-                }
-                "exp" -> {
-                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
-                    Value.Symbol("exp")(f.arguments[0]) * diff(f.arguments[0], symbol)
-                }
-                "sin" -> {
-                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
-                    Value.Symbol("cos")(f.arguments[0]) *
-                            diff(f.arguments[0], symbol)
-                }
-                "cos" -> {
-                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
-                    Value.Number(-1.0) *
-                            Value.Symbol("sin")(f.arguments[0]) *
-                            diff(f.arguments[0], symbol)
-                }
-                "tan" -> {
-                    if (f.arguments.size != 1) error("'$functionName' should have one argument")
-                    (Value.Number(1.0) +
-                            (Value.Symbol("tan")(f.arguments[0]).pow(Value.Number(2.0)))
-                            ) * diff(f.arguments[0], symbol)
-                }
-                // TODO: Implement chain rule once instead repeating it
-                else -> error("Not supported function to differentiate $f")
             }
         }
         else -> Value.Expression(Value.Symbol("diff"), listOf(f, symbol))
     }
 }
+
+private val unaryDerivatives = mapOf<String, (u: Value, du: Value) -> Value>(
+    "sqrt" to { u, du -> Value.Number(.5) * du / Value.Symbol("sqrt")(u) },
+    "ln" to { u, du -> du / u },
+    "exp" to { u, du -> Value.Symbol("exp")(u) * du },
+    "sin" to { u, du -> Value.Symbol("cos")(u) * du },
+    "cos" to { u, du -> Value.Number(-1.0) * Value.Symbol("sin")(u) * du },
+    "tan" to { u, du ->
+        (Value.Number(1.0) + Value.Symbol("tan")(u).pow(Value.Number(2.0))) * du
+    },
+)
+
+private fun chain(
+    inner: Value,
+    symbol: Value.Symbol,
+    outerDerivative: (u: Value, du: Value) -> Value,
+): Value = outerDerivative(inner, diff(inner, symbol))
