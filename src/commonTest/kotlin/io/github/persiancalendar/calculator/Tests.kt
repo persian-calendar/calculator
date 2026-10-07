@@ -181,6 +181,13 @@ class Tests {
             assertEquals(inputs.size, inputs.toSet().size, "Duplicate inputs")
         }.forEach { (input, expected) ->
             assertEquals(expected, eval("diff($input, x)"), input)
+//            // Check if expected is evaluable at all
+//            println(expected)
+//            assertEquals(
+//                expected,
+//                Evaluator(expected, symbolic = true)()[0].renderAsArgument(),
+//                input,
+//            )
         }
     }
 

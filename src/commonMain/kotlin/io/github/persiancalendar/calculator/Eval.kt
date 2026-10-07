@@ -223,7 +223,7 @@ private fun tokenize(input: String): List<Token> {
     return tokens
 }
 
-private class Evaluator(input: String) {
+internal class Evaluator(input: String, private val symbolic: Boolean = false) {
     private val clearFunction: Value.Function = Value.Function({
         registry = defaultValues()
         Value.Null
@@ -341,7 +341,10 @@ private class Evaluator(input: String) {
             }
             TokenType.SYMBOL -> {
                 val name = consume(TokenType.SYMBOL).text
-                registry[name] ?: Value.Symbol(name)
+                val entry = registry[name]
+                if (entry is Value.Function && symbolic) {
+                    Value.Symbol(name) // keep as symbol, evaluate nothing
+                } else entry ?: Value.Symbol(name)
             }
             TokenType.LPAREN -> {
                 consume(TokenType.LPAREN)
