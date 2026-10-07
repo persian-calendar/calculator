@@ -100,8 +100,8 @@ class Tests {
             "ln(x^12)" to "12 / x",
             "exp(x^25)" to "25 * (exp(x ^ 25) * x ^ 24)",
             "sin(2 * x)" to "2 * cos(2 * x)",
-            "sin(cos(x))" to "-(cos(cos(x)) * sin(x))",
-            "tan(cos(x))" to "-((1 + tan(cos(x)) ^ 2) * sin(x))",
+            "sin(cos(x))" to "-cos(cos(x)) * sin(x)",
+            "tan(cos(x))" to "-(1 + tan(cos(x)) ^ 2) * sin(x)",
             "x" to "1",
             "3" to "0",
             "y" to "0",
@@ -180,7 +180,6 @@ class Tests {
             val inputs = it.map { it.first }
             assertEquals(inputs.size, inputs.toSet().size, "Duplicate inputs")
         }.forEach { (input, expected) ->
-            println(input)
             assertEquals(expected, eval("diff($input, x)"), input)
 //            // Check if expected is evaluable at all
 //            println(expected)

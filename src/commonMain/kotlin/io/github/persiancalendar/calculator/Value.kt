@@ -60,25 +60,22 @@ internal sealed interface Value {
     }
 
     data class Expression(val function: Symbol, val arguments: List<Value>) : Value {
-        // Zero if it isn't an operator
-        private val precedence = when (function.name) {
-            "+", "-" -> 1
-            "*", "/", "%" -> 2
-            "^", "**" -> 3
-            else -> 0
-        }
+        // Null if isn't an operator
+        private val thisOperator = Operator.match(function.name)
 
         override fun toString(): String = render(atRoot = false)
 
         fun render(atRoot: Boolean): String {
             val name = function.name
-            if (precedence == 0) {
+            if (thisOperator == null) {
                 return "$name(${arguments.joinToString(", ") { it.renderAsArgument() }})"
             }
             // "-1 * x" -> "-x"
+            // "-1 * (a * b)" -> "-a * b" (parens unnecessary: reparses to the same tree)
             if (name == "*" && arguments.size == 2 && arguments[0] == Number(-1.0)) {
                 val inner = arguments[1]
-                val needsParens = inner is Expression && inner.precedence > 0
+                val needsParens =
+                    inner is Expression && inner.thisOperator != null && inner.function.name != "*"
                 val body = inner.renderAsArgument()
                 return if (needsParens) "-($body)" else "-$body"
             }
@@ -88,12 +85,12 @@ internal sealed interface Value {
                 else arguments[0].renderAsArgument()
 
                 else -> {
-                    val rightAssoc = isRightAssociative(name)
+                    val rightAssociative = Operator.match(name)?.isRightAssociative ?: false
                     arguments.mapIndexed { i, arg ->
                         when (arg) {
                             is Expression -> arg.renderAsOperand(
-                                parentPrecedence = precedence,
-                                parentRightAssoc = rightAssoc,
+                                parentOperator = thisOperator,
+                                parentRightAssociative = rightAssociative,
                                 isFirst = i == 0,
                                 isLast = i == arguments.lastIndex,
                             )
@@ -107,19 +104,17 @@ internal sealed interface Value {
         }
 
         fun renderAsOperand(
-            parentPrecedence: Int,
-            parentRightAssoc: Boolean,
+            parentOperator: Operator,
+            parentRightAssociative: Boolean,
             isFirst: Boolean,
             isLast: Boolean,
         ): String {
-            if (precedence == 0) return render(atRoot = true)
+            if (thisOperator == null) return render(atRoot = true)
             val needsParens =
-                precedence < parentPrecedence || (precedence == parentPrecedence && ((isFirst && parentRightAssoc) || (isLast && !parentRightAssoc)))
+                parentOperator proceeds thisOperator || (thisOperator == parentOperator && ((isFirst && parentRightAssociative) || (isLast && !parentRightAssociative)))
             val body = render(atRoot = true)
             return if (needsParens) "($body)" else body
         }
-
-        private fun isRightAssociative(name: String): Boolean = name == "^" || name == "**"
     }
 
     fun renderAsArgument(): String = if (this is Expression) render(atRoot = true) else toString()

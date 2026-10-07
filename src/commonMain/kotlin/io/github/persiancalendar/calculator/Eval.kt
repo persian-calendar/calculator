@@ -75,6 +75,20 @@ private fun unaryFunction(
     }, 1)
 }
 
+internal enum class Operator(private vararg val values: String) {
+    Additive("+", "-"), Multiplicative("*", "/", "%"), Exponential("^", "**");
+
+    operator fun contains(text: String): Boolean = text in values
+    infix fun proceeds(other: Operator) = this > other
+
+    /** Whether an infix operator groups right-to-left. */
+    val isRightAssociative get() = this == Exponential
+
+    companion object {
+        fun match(name: String) = entries.firstOrNull { name in it.values }
+    }
+}
+
 private fun binaryFunction(
     name: String,
     action: (Double, Double) -> Double,
@@ -134,7 +148,9 @@ private val constants = mapOf(
 
 private enum class TokenType { NUMBER, SYMBOL, OP, LPAREN, RPAREN, COMMA, EQUALS, NEWLINE, EOF }
 
-private data class Token(val type: TokenType, val text: String, val index: Int)
+private data class Token(val type: TokenType, val text: String, val index: Int) {
+    infix fun toBe(operator: Operator): Boolean = type == TokenType.OP && text in operator
+}
 
 private fun tokenize(input: String): List<Token> {
     val tokens = mutableListOf<Token>()
@@ -283,7 +299,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
 
     private fun parseAdditive(): Value {
         var left = parseMultiplicative()
-        while (peek().type == TokenType.OP && peek().text in setOf("+", "-")) {
+        while (peek() toBe Operator.Additive) {
             val op = peek().text
             position++
             left = applyBinary(op, left, parseMultiplicative())
@@ -293,7 +309,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
 
     private fun parseMultiplicative(): Value {
         var left = parseExponential()
-        while (peek().type == TokenType.OP && peek().text in setOf("*", "/", "%")) {
+        while (peek() toBe Operator.Multiplicative) {
             val op = peek().text
             position++
             left = applyBinary(op, left, parseExponential())
@@ -303,7 +319,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
 
     private fun parseExponential(): Value {
         val operands = mutableListOf(parseSignedAtom())
-        while (peek().type == TokenType.OP && peek().text in setOf("^", "**")) {
+        while (peek() toBe Operator.Exponential) {
             position++
             operands += parseSignedAtom()
         }
