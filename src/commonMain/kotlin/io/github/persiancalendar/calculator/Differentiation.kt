@@ -17,8 +17,6 @@ internal fun diff(f: Value, symbol: Value.Symbol): Value {
                 acc + term
             }
 
-            "%" -> error("'%' is not differentiable")
-
             "/" -> {
                 (f.arguments[1] * diff(
                     f.arguments[0], symbol
