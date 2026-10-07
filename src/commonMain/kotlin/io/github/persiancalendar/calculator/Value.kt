@@ -73,13 +73,17 @@ sealed interface Value {
     }
 
     operator fun plus(other: Value): Value {
-        if (this !is Number || other !is Number) return Symbol("+")(this, other)
-        if (unit == other.unit) return Number(value + other.value, unit)
-        val thisSecondFactor = timeUnits[unit]
-        val otherSecondFactor = timeUnits[other.unit]
-        if (thisSecondFactor == null || otherSecondFactor == null)
-            error("This addition of units isn't supported")
-        return Number(value * thisSecondFactor + other.value * otherSecondFactor, "s")
+        if (this is Number && other is Number) {
+            if (unit == other.unit) return Number(value + other.value, unit)
+            val thisSecondFactor = timeUnits[unit]
+            val otherSecondFactor = timeUnits[other.unit]
+            if (thisSecondFactor == null || otherSecondFactor == null)
+                error("This addition of units isn't supported")
+            return Number(value * thisSecondFactor + other.value * otherSecondFactor, "s")
+        }
+        if (this.isZero()) return other
+        if (other.isZero()) return this
+        return Symbol("+")(this, other)
     }
 
     operator fun minus(other: Value): Value {
@@ -88,11 +92,22 @@ sealed interface Value {
     }
 
     operator fun times(other: Value): Value {
-        if (this !is Number || other !is Number) return Symbol("*")(this, other)
-        // TODO: Maybe just allowing multiply of two length units? What else should be accepted?
-        if (unit != null && other.unit != null) error("Two numbers with unit are multiplied")
-        return Number(value * other.value, unit ?: other.unit)
+        if (this is Number && other is Number) {
+            // TODO: Maybe just allowing multiply of two length units? What else should be accepted?
+            if (unit != null && other.unit != null) error("Two numbers with unit are multiplied")
+            return Number(value * other.value, unit ?: other.unit)
+        }
+        if (this.isZero() || other.isZero()) return Number(0.0)
+        if (this.isOne()) return other
+        if (other.isOne()) return this
+        return Symbol("*")(this, other)
     }
+
+    private fun Value.isZero() =
+        this is Number && value == 0.0 && unit == null
+
+    private fun Value.isOne() =
+        this is Number && value == 1.0 && unit == null
 
     operator fun div(other: Value): Value {
         if (this !is Number || other !is Number) return Symbol("/")(this, other)

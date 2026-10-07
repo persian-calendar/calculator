@@ -6,44 +6,18 @@ fun diff(f: Value, symbol: Value.Symbol): Value {
         is Value.Symbol -> Value.Number(if (f.name == symbol.name) 1.0 else 0.0)
         is Value.Expression -> {
             when (val functionName = f.function.name) {
-                "+", "-" -> Value.Expression(
-                    f.function,
-                    f.arguments
-                        .map { diff(it, symbol) }
-                        .filter { (it as? Value.Number)?.value != .0 }
-                    // TODO: Move this logic to the operator itself
-                )
+                "+", "-" -> f.arguments.map { diff(it, symbol) }
+                    .fold(Value.Number(0.0), Value::plus)
                 "*" -> {
-                    if (f.arguments.size != 2)
-                        error("Only multiplication of two operands is supported")
-                    Value.Expression(
-                        Value.Symbol("+"),
-                        listOf(
-                            f.arguments[0] * diff(f.arguments[1], symbol),
+                    f.arguments[0] * diff(f.arguments[1], symbol) +
                             f.arguments[1] * diff(f.arguments[0], symbol)
-                        ).filter { arg ->
-                            val arguments = (arg as? Value.Expression)?.arguments
-                                ?: return@filter true
-                            arguments.all { (it as? Value.Number)?.value != .0 }
-                            // TODO: Move this logic to the operator itself
-                        }
-                    )
                 }
                 "/" -> {
-                    if (f.arguments.size != 2)
-                        error("Only division of two operands is supported")
-                    Value.Expression(
-                        Value.Symbol("-"),
-                        listOf(
-                            f.arguments[0] * diff(f.arguments[1], symbol),
-                            f.arguments[1] * diff(f.arguments[0], symbol)
-                        ).filter { arg ->
-                            val arguments = (arg as? Value.Expression)?.arguments
-                                ?: return@filter true
-                            arguments.all { (it as? Value.Number)?.value != .0 }
-                            // TODO: Move this logic to the operator itself
-                        }
-                    ) / (f.arguments[1].pow(Value.Number(2.0)))
+                    (f.arguments[1] * diff(
+                        f.arguments[0], symbol
+                    ) - f.arguments[0] * diff(
+                        f.arguments[1], symbol
+                    )) / f.arguments[1].pow(Value.Number(2.0))
                 }
                 "^" -> {
                     if (f.arguments.size != 2)
