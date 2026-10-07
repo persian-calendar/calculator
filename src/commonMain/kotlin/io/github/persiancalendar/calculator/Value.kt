@@ -58,17 +58,27 @@ sealed interface Value {
         override fun toString(): String =
             "(${values.joinToString(", ", transform = Value::toString)})"
     }
-
     data class Expression(val function: Symbol, val arguments: List<Value>) : Value {
-        override fun toString(): String {
-            return when (function.name) {
-                "+", "-", "/", "*", "%", "**", "^" -> when (arguments.size) {
+        override fun toString(): String = toString(root = false)
+
+        fun toString(root: Boolean): String {
+            val body = when (function.name) {
+                in operators -> when (arguments.size) {
                     0 -> "0"
                     1 -> if (function.name == "-") "(-${arguments[0]})" else arguments[0].toString()
-                    else -> "(${arguments.joinToString(" ${function.name} ")})"
+                    else -> arguments.joinToString(" ${function.name} ")
                 }
                 else -> "${function.name}(${arguments.joinToString(", ")})"
             }
+            return when {
+                root && function.name in operators -> body
+                function.name in operators -> "($body)"
+                else -> body
+            }
+        }
+
+        companion object {
+            private val operators = setOf("+", "-", "/", "*", "%", "**", "^")
         }
     }
 

@@ -391,7 +391,9 @@ private class Evaluator(input: String) {
 
 fun eval(input: String): String {
     val result = Evaluator(input)()
-    return if (result.size == 1 && result[0] is Value.Number)
-        (result[0] as Value.Number).detailedFormat()
-    else result.joinToString("\n")
+    return when (result.size) {
+        1 if result[0] is Value.Number -> (result[0] as Value.Number).detailedFormat()
+        1 if result[0] is Value.Expression -> (result[0] as Value.Expression).toString(true)
+        else -> result.joinToString("\n")
+    }
 }
