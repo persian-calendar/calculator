@@ -107,8 +107,8 @@ class Tests {
             "x+7" to "1",
             "x*5" to "5",
             "5*x" to "5",
-            "x^3 + 2*x^2 - 4*x + 3" to "(((3 * (x ^ 2)) + (2 * (2 * (x ^ 1)))) - 4)",
-            "sqrt(x^2 + 2)" to "((0.5 * (2 * (x ^ 1))) / sqrt(((x ^ 2) + 2)))",
+            "x^3 + 2*x^2 - 4*x + 3" to "(((3 * (x ^ 2)) + (4 * x)) - 4)",
+            "sqrt(x^2 + 2)" to "(x / sqrt(((x ^ 2) + 2)))",
             "ln((1 + x)^3)" to "((3 * ((1 + x) ^ 2)) / ((1 + x) ^ 3))",
 
             // unary minus
@@ -117,9 +117,9 @@ class Tests {
             "-2*x" to "-2",
             "-2 * x + 3" to "-2",
             "-(x + 1)" to "-1",
-            "-(x^2)" to "(-1 * (2 * (x ^ 1)))",
+            "-(x^2)" to "(-2 * x)",
             "-sin(x)" to "(-1 * cos(x))",
-            "-cos(x)" to "(-1 * (-1 * sin(x)))", // because -(-1 * sin(x)) = sin(x)
+            "-cos(x)" to "sin(x)",
             "-ln(x)" to "(-1 * (1 / x))", // du/u with du = -1
             "-exp(x)" to "(-1 * exp(x))",
             "-sqrt(x)" to "(-1 * (0.5 / sqrt(x)))",
@@ -133,14 +133,14 @@ class Tests {
 
             "1 / x" to "(-1 / (x ^ 2))",
             "2 / x" to "(-2 / (x ^ 2))",
-            "x / x" to "(0 / (x ^ 2))",
-            "x^2 / x" to "(((x * (2 * (x ^ 1))) - (x ^ 2)) / (x ^ 2))",
+            "x / x" to "0",
+            "x^2 / x" to "(((x * (2 * x)) - (x ^ 2)) / (x ^ 2))",
 
             "x^0" to "0",
             "x^1" to "1",
-            "x^2" to "(2 * (x ^ 1))",
+            "x^2" to "(2 * x)",
             "2^x" to "((2 ^ x) * ln(2))",
-            "x^x" to "((x ^ x) * (ln(x) + (x / x)))",
+            "x^x" to "((x ^ x) * (ln(x) + 1))",
 
             "cot(x)" to "(-1 * (1 + (cot(x) ^ 2)))",
             "asin(x)" to "(1 / sqrt((1 - (x ^ 2))))",
@@ -159,11 +159,11 @@ class Tests {
             "hypot(x, 1)" to "(x / hypot(x, 1))",
 
             "x^3" to "(3 * (x ^ 2))",
-            "diff(x^3, x)" to "(3 * (2 * (x ^ 1)))",
+            "diff(x^3, x)" to "(6 * x)",
             "diff(diff(x^3, x), x)" to "6",
 
             // chain cases
-            "sin(x^2)" to "(cos((x ^ 2)) * (2 * (x ^ 1)))",
+            "sin(x^2)" to "(cos((x ^ 2)) * (2 * x))",
             "exp(sin(x))" to "(exp(sin(x)) * cos(x))",
             "ln(cos(x))" to "((-1 * sin(x)) / cos(x))",
 

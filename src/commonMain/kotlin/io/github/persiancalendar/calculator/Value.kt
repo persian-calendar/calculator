@@ -64,7 +64,7 @@ sealed interface Value {
             return when (function.name) {
                 "+", "-", "/", "*", "%", "**", "^" -> when (arguments.size) {
                     0 -> "0"
-                    1 -> arguments[0].toString()
+                    1 -> if (function.name == "-") "(-${arguments[0]})" else arguments[0].toString()
                     else -> "(${arguments.joinToString(" ${function.name} ")})"
                 }
                 else -> "${function.name}(${arguments.joinToString(", ")})"
@@ -95,15 +95,34 @@ sealed interface Value {
 
     operator fun unaryMinus(): Value = Number(-1.0) * this
 
+    private fun splitCoefficient(v: Value): Pair<Number?, List<Value>> = when (v) {
+        is Number -> v to emptyList()
+        is Expression -> {
+            if (v.function.name == "*" && v.arguments.firstOrNull() is Number)
+                (v.arguments.first() as Number) to v.arguments.drop(1)
+            else null to listOf(v)
+        }
+        else -> null to listOf(v)
+    }
+
     operator fun times(other: Value): Value {
         if (this is Number && other is Number) {
-            // TODO: Maybe just allowing multiply of two length units? What else should be accepted?
             if (unit != null && other.unit != null) error("Two numbers with unit are multiplied")
             return Number(value * other.value, unit ?: other.unit)
         }
         if (this.isZero() || other.isZero()) return Number(0.0)
         if (this.isOne()) return other
         if (other.isOne()) return this
+
+        // Coefficient folding
+        val (c1, r1) = splitCoefficient(this)
+        val (c2, r2) = splitCoefficient(other)
+        if (c1 != null && c2 != null) {
+            val folded = c1 * c2            // Number * Number, respects units
+            val rest = r1 + r2
+            return rest.fold(folded, Value::times)
+        }
+
         return Symbol("*")(this, other)
     }
 
@@ -114,14 +133,18 @@ sealed interface Value {
         this is Number && value == 1.0 && unit == null
 
     operator fun div(other: Value): Value {
-        if (this !is Number || other !is Number) return Symbol("/")(this, other)
-        val resultUnit = when {
-            unit == other.unit -> null // 1m / 2m -> 1 (null)
-            unit == null && other.unit != null -> "1/${other.unit}"
-            unit != null && other.unit == null -> unit
-            else -> "$unit/${other.unit}"
+        if (this is Number && other is Number) {
+            val resultUnit = when {
+                unit == other.unit -> null
+                unit == null && other.unit != null -> "1/${other.unit}"
+                unit != null && other.unit == null -> unit
+                else -> "$unit/${other.unit}"
+            }
+            return Number(value / other.value, resultUnit)
         }
-        return Number(value / other.value, resultUnit)
+        if (this == other) return Number(1.0)   // symbolic x/x = 1
+        if (this.isZero()) return Number(0.0)   // 0 / symbolic = 0
+        return Symbol("/")(this, other)
     }
 
     operator fun rem(other: Value): Value {
@@ -130,7 +153,8 @@ sealed interface Value {
     }
 
     fun pow(other: Value): Value {
-        if (other is Number && other.value == .0) return Number(1.0)
+        if (other is Number && other.value == 0.0) return Number(1.0)
+        if (other is Number && other.value == 1.0) return this
         if (this !is Number || other !is Number) return Symbol("^")(this, other)
         return Number(value.pow(other.value))
     }
