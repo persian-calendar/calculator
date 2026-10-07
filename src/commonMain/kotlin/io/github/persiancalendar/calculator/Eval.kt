@@ -75,11 +75,11 @@ private fun unaryFunction(
     }, 1)
 }
 
-internal enum class Operator(private vararg val values: String) {
+internal enum class OperatorPrecedence(private vararg val values: String) {
     Additive("+", "-"), Multiplicative("*", "/", "%"), Exponential("^", "**");
 
     operator fun contains(text: String): Boolean = text in values
-    infix fun proceeds(other: Operator) = this > other
+    infix fun proceeds(other: OperatorPrecedence) = this > other
 
     /** Whether an infix operator groups right-to-left. */
     val isRightAssociative get() = this == Exponential
@@ -143,13 +143,14 @@ private val constants = mapOf(
     unaryFunction("log10", ::log10),
     unaryFunction("log2", ::log2),
     binaryFunction("withSign") { x, y -> x.withSign(y) },
-    "diff" to Value.Function({ diff(it[0], it[1] as Value.Symbol) }),
+    "diff" to Value.Function({ diff(it[0], it[1] as Value.Symbol) }, 2),
+    "integrate" to Value.Function({ integrate(it[0], it[1] as Value.Symbol) }, 2),
 )
 
 private enum class TokenType { NUMBER, SYMBOL, OP, LPAREN, RPAREN, COMMA, EQUALS, NEWLINE, EOF }
 
 private data class Token(val type: TokenType, val text: String, val index: Int) {
-    infix fun toBe(operator: Operator): Boolean = type == TokenType.OP && text in operator
+    infix fun toBe(operatorPrecedence: OperatorPrecedence): Boolean = type == TokenType.OP && text in operatorPrecedence
 }
 
 private fun tokenize(input: String): List<Token> {
@@ -299,7 +300,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
 
     private fun parseAdditive(): Value {
         var left = parseMultiplicative()
-        while (peek() toBe Operator.Additive) {
+        while (peek() toBe OperatorPrecedence.Additive) {
             val op = peek().text
             position++
             left = applyBinary(op, left, parseMultiplicative())
@@ -309,7 +310,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
 
     private fun parseMultiplicative(): Value {
         var left = parseExponential()
-        while (peek() toBe Operator.Multiplicative) {
+        while (peek() toBe OperatorPrecedence.Multiplicative) {
             val op = peek().text
             position++
             left = applyBinary(op, left, parseExponential())
@@ -319,7 +320,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
 
     private fun parseExponential(): Value {
         val operands = mutableListOf(parseSignedAtom())
-        while (peek() toBe Operator.Exponential) {
+        while (peek() toBe OperatorPrecedence.Exponential) {
             position++
             operands += parseSignedAtom()
         }

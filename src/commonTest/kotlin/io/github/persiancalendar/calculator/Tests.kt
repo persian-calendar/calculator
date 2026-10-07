@@ -176,18 +176,57 @@ class Tests {
 
             "log2(x)" to "1 / (${ln(2.0)} * x)",
             "log10(x)" to "1 / (${ln(10.0)} * x)",
+
+            // unevaluated diffs
+            "min(x, y)" to "diff(min(x, y), x)",
+            "max(x, y)" to "diff(max(x, y), x)",
+            "withSign(x, y)" to "diff(withSign(x, y), x)",
+            "x % y" to "diff(x % y, x)",
         ).also {
             val inputs = it.map { it.first }
             assertEquals(inputs.size, inputs.toSet().size, "Duplicate inputs")
         }.forEach { (input, expected) ->
             assertEquals(expected, eval("diff($input, x)"), input)
-//            // Check if expected is evaluable at all
-//            println(expected)
-//            assertEquals(
-//                expected,
-//                Evaluator(expected, symbolic = true)()[0].renderAsArgument(),
-//                input,
-//            )
+        }
+    }
+
+    @Test
+    fun `test integration`() {
+        listOf(
+            // constant rule
+            "1" to "x",
+            "5" to "5 * x",
+
+            // symbol and power rule
+            "x" to "x ^ 2 / 2",
+            "x^2" to "x ^ 3 / 3",
+            "x^3" to "x ^ 4 / 4",
+            "x^-1" to "ln(x)",
+            "x^-2" to "-1 / x",
+
+            // linearity
+            "x + 1" to "x ^ 2 / 2 + x",
+            "2*x" to "x ^ 2",
+            "3*x^2" to "x ^ 3",
+
+            // elementary antiderivatives
+            "sin(x)" to "-cos(x)",
+            "cos(x)" to "sin(x)",
+            "exp(x)" to "exp(x)",
+            "1/x" to "ln(x)",
+            "2/x" to "2 * ln(x)",
+
+            // linear substitution
+            "sin(2 * x)" to "-cos(2 * x) / 2",
+            "cos(3 * x)" to "sin(3 * x) / 3",
+            "exp(3 * x)" to "exp(3 * x) / 3",
+
+            // graceful give-up
+            "x^x" to "integrate(x ^ x, x)",
+            "sin(x^2)" to "integrate(sin(x ^ 2), x)",
+            "x * sin(x)" to "integrate(x * sin(x), x)",
+        ).forEach { (input, expected) ->
+            assertEquals(expected, eval("integrate($input, x)"), input)
         }
     }
 

@@ -53,7 +53,7 @@ internal fun diff(f: Value, symbol: Value.Symbol): Value {
                     )
                 }
 
-                else -> error("Not supported function to differentiate $f")
+                else -> Value.Expression(Value.Symbol("diff"), listOf(f, symbol))
             }
         }
 

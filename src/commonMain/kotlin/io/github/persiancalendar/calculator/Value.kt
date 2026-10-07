@@ -61,13 +61,13 @@ internal sealed interface Value {
 
     data class Expression(val function: Symbol, val arguments: List<Value>) : Value {
         // Null if isn't an operator
-        private val thisOperator = Operator.match(function.name)
+        private val thisOperatorPrecedence = OperatorPrecedence.match(function.name)
 
         override fun toString(): String = render(atRoot = false)
 
         fun render(atRoot: Boolean): String {
             val name = function.name
-            if (thisOperator == null) {
+            if (thisOperatorPrecedence == null) {
                 return "$name(${arguments.joinToString(", ") { it.renderAsArgument() }})"
             }
             // "-1 * x" -> "-x"
@@ -79,7 +79,7 @@ internal sealed interface Value {
                 val rest = arguments.drop(1)
                 val body = rest.joinToString(" * ") { arg ->
                     when (arg) {
-                        is Expression if arg.thisOperator != null && arg.function.name != "*" && arg.function.name != "/" ->
+                        is Expression if arg.thisOperatorPrecedence != null && arg.function.name != "*" && arg.function.name != "/" ->
                             "(${arg.renderAsArgument()})"
 
                         is Expression -> arg.renderAsArgument()
@@ -94,11 +94,12 @@ internal sealed interface Value {
                 else arguments[0].renderAsArgument()
 
                 else -> {
-                    val rightAssociative = Operator.match(name)?.isRightAssociative ?: false
+                    val rightAssociative =
+                        OperatorPrecedence.match(name)?.isRightAssociative ?: false
                     arguments.mapIndexed { i, arg ->
                         when (arg) {
                             is Expression -> arg.renderAsOperand(
-                                parentOperator = thisOperator,
+                                parentOperatorPrecedence = thisOperatorPrecedence,
                                 parentRightAssociative = rightAssociative,
                                 isFirst = i == 0,
                                 isLast = i == arguments.lastIndex,
@@ -113,14 +114,14 @@ internal sealed interface Value {
         }
 
         fun renderAsOperand(
-            parentOperator: Operator,
+            parentOperatorPrecedence: OperatorPrecedence,
             parentRightAssociative: Boolean,
             isFirst: Boolean,
             isLast: Boolean,
         ): String {
-            if (thisOperator == null) return render(atRoot = true)
+            if (thisOperatorPrecedence == null) return render(atRoot = true)
             val needsParens =
-                parentOperator proceeds thisOperator || (thisOperator == parentOperator && ((isFirst && parentRightAssociative) || (isLast && !parentRightAssociative)))
+                parentOperatorPrecedence proceeds thisOperatorPrecedence || (thisOperatorPrecedence == parentOperatorPrecedence && ((isFirst && parentRightAssociative) || (isLast && !parentRightAssociative)))
             val body = render(atRoot = true)
             return if (needsParens) "($body)" else body
         }
@@ -244,7 +245,14 @@ internal sealed interface Value {
         // "x * (2 * y)" -> "2 * (x * y)"
         if (c1 == null && c2 != null && r2.size == 1) return c2 * (this * r2[0])
         // "(2 * x) * y" -> "2 * (x * y)"
-        if (c2 == null && c1 != null && r1.size == 1) return c1 * (r1[0] * other)
+        if (c2 == null && c1 != null && r1.size == 1) return c1 * (other * r1[0])
+        // "c * (f / n)" -> "(c / n) * f" when n divides c
+        if (this is Number && unit == null && other is Expression && other.function.name == "/" && other.arguments.size == 2 && other.arguments[1] is Number && (other.arguments[1] as Number).unit == null) {
+            val n = (other.arguments[1] as Number).value
+            if (n != 0.0 && value % n == 0.0) {
+                return Number(value / n) * other.arguments[0]
+            }
+        }
         // "(-1 * a * b) * c" -> "-1 * a * b * c"
         if (c1 != null && r1.size > 1) return Expression(
             Symbol("*"), listOf(c1) + r1 + listOf(other)
@@ -295,6 +303,8 @@ internal sealed interface Value {
         if (this == other) return Number(1.0)
         // "0 / x" -> "0"
         if (this.isZero()) return Number(0.0)
+        // "x / 1" -> "x"
+        if (other.isOne()) return this
         // "x^m / x^n" -> "x ^ (m - n)"
         if (this is Expression && this.function.name == "^" && other is Expression && other.function.name == "^" && this.arguments[0] == other.arguments[0]) {
             val e1 = this.arguments[1]
