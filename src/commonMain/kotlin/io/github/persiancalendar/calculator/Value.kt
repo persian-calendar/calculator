@@ -71,6 +71,16 @@ internal sealed interface Value {
 
         fun render(atRoot: Boolean): String {
             val name = function.name
+            if (name == "*" && arguments.size == 2 && arguments[0] == Number(-1.0)) {
+                val x = arguments[1]
+                val inner = if (x is Expression) x.renderAsOperand(
+                    parentPrecedence = 4, // tighter than any infix op
+                    parentRightAssoc = false,
+                    isFirst = true,
+                    isLast = true,
+                ) else x.toString()
+                return "-$inner"
+            }
             if (precedence == 0) {
                 return "$name(${arguments.joinToString(", ") { it.renderAsArgument() }})"
             }

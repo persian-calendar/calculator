@@ -100,8 +100,8 @@ class Tests {
             "ln(x^12)" to "12 * x ^ 11 / x ^ 12", // which simplifies as 12/x
             "exp(x^25)" to "exp(x ^ 25) * (25 * x ^ 24)",
             "sin(2 * x)" to "cos(2 * x) * 2",
-            "sin(cos(x))" to "cos(cos(x)) * (-1 * sin(x))",
-            "tan(cos(x))" to "(1 + tan(cos(x)) ^ 2) * (-1 * sin(x))",
+            "sin(cos(x))" to "cos(cos(x)) * (-sin(x))",
+            "tan(cos(x))" to "(1 + tan(cos(x)) ^ 2) * (-sin(x))",
             "x" to "1",
             "3" to "0",
             "y" to "0",
@@ -119,11 +119,11 @@ class Tests {
             "-2 * x + 3" to "-2",
             "-(x + 1)" to "-1",
             "-(x^2)" to "-2 * x",
-            "-sin(x)" to "-1 * cos(x)",
+            "-sin(x)" to "-cos(x)",
             "-cos(x)" to "sin(x)",
-            "-ln(x)" to "-1 * (1 / x)", // du/u with du = -1
-            "-exp(x)" to "-1 * exp(x)",
-            "-sqrt(x)" to "-1 * (0.5 / sqrt(x))",
+            "-ln(x)" to "-(1 / x)", // du/u with du = -1
+            "-exp(x)" to "-exp(x)",
+            "-sqrt(x)" to "-(0.5 / sqrt(x))",
 
             // subtraction must not be treated as addition
             "x - x" to "0",
@@ -143,7 +143,7 @@ class Tests {
             "2^x" to "2 ^ x * ln(2)",
             "x^x" to "x ^ x * (ln(x) + 1)",
 
-            "cot(x)" to "-1 * (1 + cot(x) ^ 2)",
+            "cot(x)" to "-(1 + cot(x) ^ 2)",
             "asin(x)" to "1 / sqrt(1 - x ^ 2)",
             "acos(x)" to "-1 / sqrt(1 - x ^ 2)",
             "atan(x)" to "1 / (1 + x ^ 2)",
@@ -166,7 +166,7 @@ class Tests {
             // chain rule
             "sin(x^2)" to "cos(x ^ 2) * (2 * x)",
             "exp(sin(x))" to "exp(sin(x)) * cos(x)",
-            "ln(cos(x))" to "-1 * sin(x) / cos(x)",
+            "ln(cos(x))" to "-sin(x) / cos(x)",
 
             "cbrt(x)" to "1 / (3 * cbrt(x) ^ 2)",
             "expm1(x)" to "exp(x)",
