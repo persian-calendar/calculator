@@ -67,7 +67,7 @@ internal sealed interface Value {
 
         fun render(atRoot: Boolean): String {
             val name = function.name
-            if (thisOperatorPrecedence == null) {
+            if (thisOperatorPrecedence == OperatorPrecedence.NotAnOperator) {
                 return "$name(${arguments.joinToString(", ") { it.renderAsArgument() }})"
             }
             // "-1 * x" -> "-x"
@@ -79,7 +79,7 @@ internal sealed interface Value {
                 val rest = arguments.drop(1)
                 val body = rest.joinToString(" * ") { arg ->
                     when (arg) {
-                        is Expression if arg.thisOperatorPrecedence != null && arg.function.name != "*" && arg.function.name != "/" ->
+                        is Expression if arg.thisOperatorPrecedence != OperatorPrecedence.NotAnOperator && arg.function.name != "*" && arg.function.name != "/" ->
                             "(${arg.renderAsArgument()})"
 
                         is Expression -> arg.renderAsArgument()
@@ -119,7 +119,7 @@ internal sealed interface Value {
             isFirst: Boolean,
             isLast: Boolean,
         ): String {
-            if (thisOperatorPrecedence == null) return render(atRoot = true)
+            if (thisOperatorPrecedence == OperatorPrecedence.NotAnOperator) return render(atRoot = true)
             val needsParens =
                 parentOperatorPrecedence proceeds thisOperatorPrecedence || (thisOperatorPrecedence == parentOperatorPrecedence && ((isFirst && parentRightAssociative) || (isLast && !parentRightAssociative)))
             val body = render(atRoot = true)

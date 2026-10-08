@@ -76,16 +76,12 @@ private fun unaryFunction(
 }
 
 internal enum class OperatorPrecedence(private vararg val values: String) {
-    Additive("+", "-"), Multiplicative("*", "/", "%"), Exponential("^", "**");
-
-    operator fun contains(text: String): Boolean = text in values
-    infix fun proceeds(other: OperatorPrecedence) = this > other
-
-    /** Whether an infix operator groups right-to-left. */
-    val isRightAssociative get() = this == Exponential
-
+    NotAnOperator, Additive("+", "-"), Multiplicative("*", "/", "%"), Exponential("^", "**");
+    infix fun proceeds(other: OperatorPrecedence) = this.ordinal > other.ordinal
+    val next get() = entries.getOrNull(ordinal + 1)
+    val isRightAssociative get() = this == Exponential // Whether an infix operator groups right-to-left.
     companion object {
-        fun match(name: String) = entries.firstOrNull { name in it.values }
+        fun match(name: String) = entries.firstOrNull { name in it.values } ?: NotAnOperator
     }
 }
 
@@ -94,10 +90,9 @@ private fun binaryFunction(
     action: (Double, Double) -> Double,
 ): Pair<String, Value.Function> = name to Value.Function({ args ->
     val (x, y) = args
-    if (x is Value.Number && y is Value.Number && x.unit == null && y.unit == null) Value.Number(
-        action(x.value, y.value)
-    )
-    else Value.Expression(Value.Symbol(name), args)
+    if (x is Value.Number && y is Value.Number && x.unit == null && y.unit == null) {
+        Value.Number(action(x.value, y.value))
+    } else Value.Expression(Value.Symbol(name), args)
 }, 2)
 
 private val constants = mapOf(
@@ -163,12 +158,13 @@ private sealed interface Token {
     class Number(val value: Double) : Token
     class Symbol(val text: String) : Token
 
-    infix fun toBe(operatorPrecedence: OperatorPrecedence): Boolean = when (this) {
-        Minus, Plus -> OperatorPrecedence.Additive
-        Div, Mul, Mod -> OperatorPrecedence.Multiplicative
-        Pow -> OperatorPrecedence.Exponential
-        else -> null
-    } == operatorPrecedence
+    val precedence: OperatorPrecedence?
+        get() = when (this) {
+            Minus, Plus -> OperatorPrecedence.Additive
+            Div, Mul, Mod -> OperatorPrecedence.Multiplicative
+            Pow -> OperatorPrecedence.Exponential
+            else -> null
+        }
 }
 
 private fun tokenize(input: String): List<Token> = buildList {
@@ -310,30 +306,29 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
         position = 0
         return buildList {
             skipSeparators()
-            while (peek() != Token.Eof) {
+            while (lookahead() != Token.Eof) {
                 val value = parseStatement()
                 if (value != null && value !is Value.Null) add(value)
-                when (peek()) {
+                when (lookahead()) {
                     Token.Separator -> skipSeparators()
                     Token.Eof -> Unit
-                    else -> error("Unexpected token '${peek()}'")
+                    else -> error("Unexpected token '${lookahead()}'")
                 }
             }
         }
     }
 
-    private fun peek(): Token = tokens.getOrElse(position) { Token.Eof }
-
-    private fun lookahead(offset: Int): Token = tokens.getOrElse(position + offset) { Token.Eof }
+    private fun lookahead(offset: Int = 0): Token =
+        tokens.getOrElse(position + offset) { Token.Eof }
 
     private fun expect(type: Token) {
-        val token = peek()
+        val token = lookahead()
         check(token == type) { "Expected $type but found $token" }
         position++
     }
 
     private fun expectNumber(): Double {
-        val token = peek()
+        val token = lookahead()
         if (token is Token.Number) {
             position++
             return token.value
@@ -341,7 +336,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
     }
 
     private fun expectSymbol(): String {
-        val token = peek()
+        val token = lookahead()
         if (token is Token.Symbol) {
             position++
             return token.text
@@ -349,11 +344,11 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
     }
 
     private fun skipSeparators() {
-        while (peek() == Token.Separator) position++
+        while (lookahead() == Token.Separator) position++
     }
 
     private fun parseStatement(): Value? {
-        if (peek() is Token.Symbol && lookahead(1) == Token.Equals) {
+        if (lookahead() is Token.Symbol && lookahead(1) == Token.Equals) {
             val name = expectSymbol()
             expect(Token.Equals)
             registry[name] = parseExpression()
@@ -364,39 +359,25 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
         return value
     }
 
-    private fun parseExpression(): Value = parseAdditive()
+    private fun parseExpression(): Value = parseBinary(OperatorPrecedence.NotAnOperator)
 
-    private fun parseAdditive(): Value {
-        var left = parseMultiplicative()
-        while (peek() toBe OperatorPrecedence.Additive) {
-            val op = peek()
+    private fun parseBinary(minPrecedence: OperatorPrecedence): Value {
+        var left = parseSignedAtom()
+        while (true) {
+            val token = lookahead()
+            val precedence = token.precedence ?: break
+            if (minPrecedence proceeds precedence) break
             position++
-            left = applyBinary(op, left, parseMultiplicative())
+            val nextMinPrecedence = if (precedence.isRightAssociative) {
+                precedence
+            } else precedence.next ?: break
+            val right = parseBinary(nextMinPrecedence)
+            left = applyBinary(token, left, right)
         }
         return left
     }
 
-    private fun parseMultiplicative(): Value {
-        var left = parseExponential()
-        while (peek() toBe OperatorPrecedence.Multiplicative) {
-            val op = peek()
-            position++
-            left = applyBinary(op, left, parseExponential())
-        }
-        return left
-    }
-
-    private fun parseExponential(): Value {
-        return buildList {
-            add(parseSignedAtom())
-            while (peek() toBe OperatorPrecedence.Exponential) {
-                position++
-                add(parseSignedAtom())
-            }
-        }.reduceRight { x, y -> x.pow(y) }
-    }
-
-    private fun parseSignedAtom(): Value = when (peek()) {
+    private fun parseSignedAtom(): Value = when (lookahead()) {
         Token.Minus -> {
             position++
             Value.Number(-1.0) * parseSignedAtom()
@@ -413,7 +394,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
     private fun parseCall(): Value {
         val atoms = buildList {
             add(parseAtom())
-            while (when (peek()) {
+            while (when (lookahead()) {
                     is Token.Number -> true
                     is Token.Symbol -> true
                     Token.LParen -> true
@@ -425,7 +406,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
     }
 
     private fun parseAtom(): Value {
-        return when (peek()) {
+        return when (lookahead()) {
             is Token.Number -> Value.Number(expectNumber())
             is Token.Symbol -> {
                 val name = expectSymbol()
@@ -437,12 +418,12 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
 
             Token.LParen -> {
                 expect(Token.LParen)
-                if (peek() == Token.RParen) {
+                if (lookahead() == Token.RParen) {
                     expect(Token.RParen)
                     return Value.Tuple(emptyList())
                 }
                 val expressions = mutableListOf(parseExpression())
-                while (peek() == Token.Comma) {
+                while (lookahead() == Token.Comma) {
                     expect(Token.Comma)
                     expressions += parseExpression()
                 }
@@ -450,7 +431,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
                 if (expressions.size == 1) expressions[0] else Value.Tuple(expressions)
             }
 
-            else -> error("Unexpected token '${peek()}'")
+            else -> error("Unexpected token '${lookahead()}'")
         }
     }
 
