@@ -174,10 +174,6 @@ private fun tokenize(input: String): List<Token> = buildList {
         val c = input[i]
         when {
             c == ' ' || c == '\t' -> i++
-            c == '\n' -> {
-                add(Token.Separator)
-                i++
-            }
 
             c == '\r' -> {
                 i++
@@ -185,7 +181,7 @@ private fun tokenize(input: String): List<Token> = buildList {
                 add(Token.Separator)
             }
 
-            c == ';' -> {
+            c == '\n' || c == ';' -> {
                 add(Token.Separator)
                 i++
             }
