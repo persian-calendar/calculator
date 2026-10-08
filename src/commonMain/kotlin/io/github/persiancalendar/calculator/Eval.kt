@@ -147,112 +147,151 @@ private val constants = mapOf(
     "integrate" to Value.Function({ integrate(it[0], it[1] as Value.Symbol) }, 2),
 )
 
-private enum class TokenType { NUMBER, SYMBOL, OP, LPAREN, RPAREN, COMMA, EQUALS, NEWLINE, EOF }
+private sealed interface Token {
+    object Minus : Token
+    object Plus : Token
+    object Pow : Token
+    object Div : Token
+    object Mod : Token
+    object Mul : Token
+    object LParen : Token
+    object RParen : Token
+    object Comma : Token
+    object Equals : Token
+    object Eof : Token
+    object Separator : Token // "\n", "\r", ";"
+    class Number(val value: Double) : Token
+    class Symbol(val text: String) : Token
 
-private data class Token(val type: TokenType, val text: String, val index: Int) {
-    infix fun toBe(operatorPrecedence: OperatorPrecedence): Boolean = type == TokenType.OP && text in operatorPrecedence
-    fun isMinus(): Boolean = type == TokenType.OP && text == "-"
-    fun isPlus(): Boolean = type == TokenType.OP && text == "+"
+    infix fun toBe(operatorPrecedence: OperatorPrecedence): Boolean = when (this) {
+        Minus, Plus -> OperatorPrecedence.Additive
+        Div, Mul, Mod -> OperatorPrecedence.Multiplicative
+        Pow -> OperatorPrecedence.Exponential
+        else -> null
+    } == operatorPrecedence
 }
 
-private fun tokenize(input: String): List<Token> {
-    return buildList {
-        var i = 0
-        val n = input.length
-        while (i < n) {
-            val c = input[i]
-            when {
-                c == ' ' || c == '\t' -> i++
-                c == '\n' -> {
-                    add(Token(TokenType.NEWLINE, "\n", i))
-                    i++
-                }
-
-                c == '\r' -> {
-                    i++
-                    if (i < n && input[i] == '\n') i++
-                    add(Token(TokenType.NEWLINE, "\n", i))
-                }
-
-                c == ';' -> {
-                    add(Token(TokenType.NEWLINE, ";", i))
-                    i++
-                }
-
-                c == '#' -> {
-                    while (i < n && input[i] != '\n' && input[i] != '\r') i++
-                }
-
-                c == '/' && i + 1 < n && input[i + 1] == '/' -> {
-                    i += 2
-                    while (i < n && input[i] != '\n' && input[i] != '\r') i++
-                }
-
-                c == '*' && i + 1 < n && input[i + 1] == '*' -> {
-                    add(Token(TokenType.OP, "**", i))
-                    i += 2
-                }
-
-                c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '^' -> {
-                    add(Token(TokenType.OP, c.toString(), i))
-                    i++
-                }
-
-                c == '(' -> {
-                    add(Token(TokenType.LPAREN, "(", i))
-                    i++
-                }
-
-                c == ')' -> {
-                    add(Token(TokenType.RPAREN, ")", i))
-                    i++
-                }
-
-                c == ',' -> {
-                    add(Token(TokenType.COMMA, ",", i))
-                    i++
-                }
-
-                c == '=' -> {
-                    add(Token(TokenType.EQUALS, "=", i))
-                    i++
-                }
-
-                c.isDigit() -> {
-                    val start = i
-                    if (c == '0') {
-                        i++
-                    } else {
-                        while (i < n && input[i].isDigit()) i++
-                    }
-                    if (i < n && input[i] == '.' && i + 1 < n && input[i + 1].isDigit()) {
-                        i++
-                        while (i < n && input[i].isDigit()) i++
-                    }
-                    if (i < n && (input[i] == 'e' || input[i] == 'E')) {
-                        val save = i
-                        i++
-                        if (i < n && (input[i] == '+' || input[i] == '-')) i++
-                        if (i < n && input[i].isDigit()) {
-                            while (i < n && input[i].isDigit()) i++
-                        } else {
-                            i = save
-                        }
-                    }
-                    add(Token(TokenType.NUMBER, input.substring(start, i), start))
-                }
-
-                c.isLetter() || c == '_' -> {
-                    val start = i
-                    while (i < n && (input[i].isLetterOrDigit() || input[i] == '_')) i++
-                    add(Token(TokenType.SYMBOL, input.substring(start, i), start))
-                }
-
-                else -> error("Unexpected character '$c' at $i")
+private fun tokenize(input: String): List<Token> = buildList {
+    var i = 0
+    val n = input.length
+    while (i < n) {
+        val c = input[i]
+        when {
+            c == ' ' || c == '\t' -> i++
+            c == '\n' -> {
+                add(Token.Separator)
+                i++
             }
+
+            c == '\r' -> {
+                i++
+                if (i < n && input[i] == '\n') i++
+                add(Token.Separator)
+            }
+
+            c == ';' -> {
+                add(Token.Separator)
+                i++
+            }
+
+            c == '#' -> {
+                while (i < n && input[i] != '\n' && input[i] != '\r') i++
+            }
+
+            c == '/' && i + 1 < n && input[i + 1] == '/' -> {
+                i += 2
+                while (i < n && input[i] != '\n' && input[i] != '\r') i++
+            }
+
+            c == '*' && i + 1 < n && input[i + 1] == '*' -> {
+                add(Token.Pow)
+                i += 2
+            }
+
+            c == '^' -> {
+                add(Token.Pow)
+                i++
+            }
+
+            c == '+' -> {
+                add(Token.Plus)
+                i++
+            }
+
+            c == '-' -> {
+                add(Token.Minus)
+                i++
+            }
+
+            c == '/' -> {
+                add(Token.Div)
+                i++
+            }
+
+            c == '%' -> {
+                add(Token.Mod)
+                i++
+            }
+
+            c == '*' -> {
+                add(Token.Mul)
+                i++
+            }
+
+            c == '(' -> {
+                add(Token.LParen)
+                i++
+            }
+
+            c == ')' -> {
+                add(Token.RParen)
+                i++
+            }
+
+            c == ',' -> {
+                add(Token.Comma)
+                i++
+            }
+
+            c == '=' -> {
+                add(Token.Equals)
+                i++
+            }
+
+            c.isDigit() -> {
+                val start = i
+                if (c == '0') {
+                    i++
+                } else {
+                    while (i < n && input[i].isDigit()) i++
+                }
+                if (i < n && input[i] == '.' && i + 1 < n && input[i + 1].isDigit()) {
+                    i++
+                    while (i < n && input[i].isDigit()) i++
+                }
+                if (i < n && (input[i] == 'e' || input[i] == 'E')) {
+                    val save = i
+                    i++
+                    if (i < n && (input[i] == '+' || input[i] == '-')) i++
+                    if (i < n && input[i].isDigit()) {
+                        while (i < n && input[i].isDigit()) i++
+                    } else {
+                        i = save
+                    }
+                }
+                add(Token.Number(input.substring(start, i).toDouble()))
+            }
+
+            c.isLetter() || c == '_' -> {
+                val start = i
+                while (i < n && (input[i].isLetterOrDigit() || input[i] == '_')) i++
+                add(Token.Symbol(input.substring(start, i)))
+            }
+
+            else -> error("Unexpected character '$c' at $i")
         }
-        add(Token(TokenType.EOF, "", n))
     }
+    add(Token.Eof)
 }
 
 internal class Evaluator(input: String, private val symbolic: Boolean = false) {
@@ -266,43 +305,57 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
 
     private val tokens: List<Token> = tokenize(input)
     private var position = 0
-    private val eof = Token(TokenType.EOF, "", -1)
 
     operator fun invoke(): List<Value> {
         position = 0
         return buildList {
-            skipNewlines()
-            while (peek().type != TokenType.EOF) {
+            skipSeparators()
+            while (peek() != Token.Eof) {
                 val value = parseStatement()
                 if (value != null && value !is Value.Null) add(value)
-                when (peek().type) {
-                    TokenType.NEWLINE -> skipNewlines()
-                    TokenType.EOF -> Unit
-                    else -> error("Unexpected token '${peek().text}'")
+                when (peek()) {
+                    Token.Separator -> skipSeparators()
+                    Token.Eof -> Unit
+                    else -> error("Unexpected token '${peek()}'")
                 }
             }
         }
     }
 
-    private fun peek(): Token = tokens.getOrElse(position) { eof }
+    private fun peek(): Token = tokens.getOrElse(position) { Token.Eof }
 
-    private fun lookahead(offset: Int): Token = tokens.getOrElse(position + offset) { eof }
+    private fun lookahead(offset: Int): Token = tokens.getOrElse(position + offset) { Token.Eof }
 
-    private fun consume(type: TokenType): Token {
+    private fun expect(type: Token) {
         val token = peek()
-        check(token.type == type) { "Expected $type but found ${token.text}" }
+        check(token == type) { "Expected $type but found $token" }
         position++
-        return token
     }
 
-    private fun skipNewlines() {
-        while (peek().type == TokenType.NEWLINE) position++
+    private fun expectNumber(): Double {
+        val token = peek()
+        if (token is Token.Number) {
+            position++
+            return token.value
+        } else error("Expected number but found $token")
+    }
+
+    private fun expectSymbol(): String {
+        val token = peek()
+        if (token is Token.Symbol) {
+            position++
+            return token.text
+        } else error("Expected symbol but found $token")
+    }
+
+    private fun skipSeparators() {
+        while (peek() == Token.Separator) position++
     }
 
     private fun parseStatement(): Value? {
-        if (peek().type == TokenType.SYMBOL && lookahead(1).type == TokenType.EQUALS) {
-            val name = consume(TokenType.SYMBOL).text
-            consume(TokenType.EQUALS)
+        if (peek() is Token.Symbol && lookahead(1) == Token.Equals) {
+            val name = expectSymbol()
+            expect(Token.Equals)
             registry[name] = parseExpression()
             return null
         }
@@ -316,7 +369,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
     private fun parseAdditive(): Value {
         var left = parseMultiplicative()
         while (peek() toBe OperatorPrecedence.Additive) {
-            val op = peek().text
+            val op = peek()
             position++
             left = applyBinary(op, left, parseMultiplicative())
         }
@@ -326,7 +379,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
     private fun parseMultiplicative(): Value {
         var left = parseExponential()
         while (peek() toBe OperatorPrecedence.Multiplicative) {
-            val op = peek().text
+            val op = peek()
             position++
             left = applyBinary(op, left, parseExponential())
         }
@@ -343,13 +396,13 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
         }.reduceRight { x, y -> x.pow(y) }
     }
 
-    private fun parseSignedAtom(): Value = when {
-        peek().isMinus() -> {
+    private fun parseSignedAtom(): Value = when (peek()) {
+        Token.Minus -> {
             position++
             Value.Number(-1.0) * parseSignedAtom()
         }
 
-        peek().isPlus() -> {
+        Token.Plus -> {
             position++
             parseSignedAtom()
         }
@@ -360,8 +413,10 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
     private fun parseCall(): Value {
         val atoms = buildList {
             add(parseAtom())
-            while (when (peek().type) {
-                    TokenType.NUMBER, TokenType.SYMBOL, TokenType.LPAREN -> true
+            while (when (peek()) {
+                    is Token.Number -> true
+                    is Token.Symbol -> true
+                    Token.LParen -> true
                     else -> false
                 }
             ) add(parseAtom())
@@ -370,33 +425,32 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
     }
 
     private fun parseAtom(): Value {
-        return when (peek().type) {
-            TokenType.NUMBER -> {
-                val token = consume(TokenType.NUMBER)
-                Value.Number(token.text.toDouble())
-            }
-            TokenType.SYMBOL -> {
-                val name = consume(TokenType.SYMBOL).text
+        return when (peek()) {
+            is Token.Number -> Value.Number(expectNumber())
+            is Token.Symbol -> {
+                val name = expectSymbol()
                 val entry = registry[name]
                 if (entry is Value.Function && symbolic) {
                     Value.Symbol(name) // keep as symbol, evaluate nothing
                 } else entry ?: Value.Symbol(name)
             }
-            TokenType.LPAREN -> {
-                consume(TokenType.LPAREN)
-                if (peek().type == TokenType.RPAREN) {
-                    consume(TokenType.RPAREN)
+
+            Token.LParen -> {
+                expect(Token.LParen)
+                if (peek() == Token.RParen) {
+                    expect(Token.RParen)
                     return Value.Tuple(emptyList())
                 }
                 val expressions = mutableListOf(parseExpression())
-                while (peek().type == TokenType.COMMA) {
-                    consume(TokenType.COMMA)
+                while (peek() == Token.Comma) {
+                    expect(Token.Comma)
                     expressions += parseExpression()
                 }
-                consume(TokenType.RPAREN)
+                expect(Token.RParen)
                 if (expressions.size == 1) expressions[0] else Value.Tuple(expressions)
             }
-            else -> error("Unexpected token '${peek().text}'")
+
+            else -> error("Unexpected token '${peek()}'")
         }
     }
 
@@ -417,14 +471,14 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
         }
     }
 
-    private fun applyBinary(op: String, left: Value, right: Value): Value = when (op) {
-        "+" -> left + right
-        "-" -> left - right
-        "*" -> left * right
-        "/" -> left / right
-        "%" -> left % right
-        "**", "^" -> left.pow(right)
-        else -> error("Unexpected operator $op")
+    private fun applyBinary(token: Token, left: Value, right: Value): Value = when (token) {
+        Token.Plus -> left + right
+        Token.Minus -> left - right
+        Token.Mul -> left * right
+        Token.Div -> left / right
+        Token.Mod -> left % right
+        Token.Pow -> left.pow(right)
+        else -> error("Unexpected operator $token")
     }
 }
 
