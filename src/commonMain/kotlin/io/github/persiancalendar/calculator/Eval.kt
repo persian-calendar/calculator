@@ -304,7 +304,7 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
             skipSeparators()
             while (lookahead() != Token.Eof) {
                 val value = parseStatement()
-                if (value != null && value !is Value.Null) add(value)
+                if (value !is Value.Null) add(value)
                 when (lookahead()) {
                     Token.Separator -> skipSeparators()
                     Token.Eof -> Unit
@@ -343,12 +343,12 @@ internal class Evaluator(input: String, private val symbolic: Boolean = false) {
         while (lookahead() == Token.Separator) position++
     }
 
-    private fun parseStatement(): Value? {
+    private fun parseStatement(): Value {
         if (lookahead() is Token.Symbol && lookahead(1) == Token.Equals) {
             val name = expectSymbol()
             expect(Token.Equals)
             registry[name] = parseExpression()
-            return null
+            return Value.Null
         }
         var value = parseExpression()
         if (value is Value.Function && value.inputCount == 0) value = value(emptyList())
