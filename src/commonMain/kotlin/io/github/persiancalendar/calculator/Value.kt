@@ -94,8 +94,7 @@ internal sealed interface Value {
                 else arguments[0].renderAsArgument()
 
                 else -> {
-                    val rightAssociative =
-                        OperatorPrecedence.match(name)?.isRightAssociative ?: false
+                    val rightAssociative = OperatorPrecedence.match(name).isRightAssociative
                     arguments.mapIndexed { i, arg ->
                         when (arg) {
                             is Expression -> arg.renderAsOperand(
