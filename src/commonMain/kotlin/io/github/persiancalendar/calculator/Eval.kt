@@ -81,7 +81,8 @@ internal enum class OperatorPrecedence(private vararg val values: String) {
     val next get() = entries.getOrNull(ordinal + 1)
     val isRightAssociative get() = this == Exponential // Whether an infix operator groups right-to-left.
     companion object {
-        fun match(name: String) = entries.firstOrNull { name in it.values } ?: NotAnOperator
+        fun match(symbol: Value.Symbol) =
+            entries.firstOrNull { symbol.name in it.values } ?: NotAnOperator
     }
 }
 

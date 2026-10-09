@@ -61,7 +61,7 @@ internal sealed interface Value {
 
     data class Expression(val function: Symbol, val arguments: List<Value>) : Value {
         // Null if isn't an operator
-        private val thisOperatorPrecedence = OperatorPrecedence.match(function.name)
+        private val thisOperatorPrecedence = OperatorPrecedence.match(function)
 
         override fun toString(): String = render(atRoot = false)
 
@@ -94,12 +94,10 @@ internal sealed interface Value {
                 else arguments[0].renderAsArgument()
 
                 else -> {
-                    val rightAssociative = OperatorPrecedence.match(name).isRightAssociative
                     arguments.mapIndexed { i, arg ->
                         when (arg) {
                             is Expression -> arg.renderAsOperand(
                                 parentOperatorPrecedence = thisOperatorPrecedence,
-                                parentRightAssociative = rightAssociative,
                                 isFirst = i == 0,
                                 isLast = i == arguments.lastIndex,
                             )
@@ -114,13 +112,18 @@ internal sealed interface Value {
 
         fun renderAsOperand(
             parentOperatorPrecedence: OperatorPrecedence,
-            parentRightAssociative: Boolean,
             isFirst: Boolean,
             isLast: Boolean,
         ): String {
-            if (thisOperatorPrecedence == OperatorPrecedence.NotAnOperator) return render(atRoot = true)
-            val needsParens =
-                parentOperatorPrecedence proceeds thisOperatorPrecedence || (thisOperatorPrecedence == parentOperatorPrecedence && ((isFirst && parentRightAssociative) || (isLast && !parentRightAssociative)))
+            if (thisOperatorPrecedence == OperatorPrecedence.NotAnOperator) {
+                return render(atRoot = true)
+            }
+            val parentRightAssociative = parentOperatorPrecedence.isRightAssociative
+            val needsParens = parentOperatorPrecedence proceeds thisOperatorPrecedence || (when {
+                isFirst && parentRightAssociative -> true
+                isLast && !parentRightAssociative -> true
+                else -> false
+            } && thisOperatorPrecedence == parentOperatorPrecedence)
             val body = render(atRoot = true)
             return if (needsParens) "($body)" else body
         }
