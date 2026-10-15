@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Calculator</title>
+	<meta name="description" content="Evaluate mathematics expressions in the browser, with the persian-calendar/calculator library compiled to JavaScript and WebAssembly.">
+	<link rel="manifest" href="manifest.webmanifest">
+	<meta name="theme-color" content="#0e1116">
+	<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+	<link rel="icon" type="image/png" href="icons/icon-192.png">
+	<link rel="apple-touch-icon" href="icons/icon-192.png">
+	<style>
+:root {
+	--bg: #0e1116;
+	--surface: #161a21;
+	--border: #2a3038;
+	--text: #e7ebf0;
+	--muted: #8a93a0;
+	--accent: #7cc4a0;
+	--accent-ink: #06140d;
+	--danger: #ff7b72;
+	--mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+	color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+	margin: 0;
+	padding: 1.5rem 1rem 3rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.25rem;
+	min-height: 100vh;
+	background:
+		radial-gradient(55rem 34rem at 50% -12%, #182a22 0%, transparent 62%),
+		var(--bg);
+	color: var(--text);
+	font: 16px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+	-webkit-text-size-adjust: 100%;
+}
+
+main {
+	width: 100%;
+	max-width: 40rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+header { text-align: center; }
+
+h1 {
+	margin: 0;
+	font-size: clamp(1.5rem, 5vw, 2rem);
+	letter-spacing: -.02em;
+}
+
+header p {
+	margin: .4rem 0 0;
+	color: var(--muted);
+	font-size: .9rem;
+}
+
+.panel {
+	display: flex;
+	flex-direction: column;
+	gap: .75rem;
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: .9rem;
+	background: var(--surface);
+}
+
+label {
+	display: flex;
+	flex-direction: column;
+	gap: .35rem;
+	font-size: .8rem;
+	font-weight: 600;
+	color: var(--muted);
+}
+
+textarea {
+	width: 100%;
+	min-height: 4.5rem;
+	padding: .7rem .8rem;
+	border: 1px solid var(--border);
+	border-radius: .6rem;
+	background: #0e1116;
+	color: var(--text);
+	font-family: var(--mono);
+	font-size: 1rem;
+	line-height: 1.5;
+	resize: vertical;
+}
+
+textarea:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+.hint {
+	margin: 0;
+	color: var(--muted);
+	font-size: .75rem;
+}
+
+.hint code {
+	font-family: var(--mono);
+	font-size: .95em;
+	color: var(--text);
+}
+
+/* The result is what the page is for, so it gets the size and the colour. */
+.result {
+	display: flex;
+	flex-direction: column;
+	gap: .4rem;
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: .9rem;
+	background: var(--surface);
+}
+
+.result__label {
+	margin: 0;
+	color: var(--muted);
+	font-size: .75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .08em;
+}
+
+.result__lines {
+	display: flex;
+	flex-direction: column;
+	gap: .15rem;
+	margin: 0;
+	min-height: 2.2rem;
+	overflow-x: auto;
+}
+
+.result__line {
+	margin: 0;
+	font-family: var(--mono);
+	font-size: clamp(1.1rem, 4.5vw, 1.5rem);
+	line-height: 1.4;
+	word-break: break-word;
+}
+
+.result__line--empty { color: var(--muted); }
+
+.result.is-error .result__line { color: var(--danger); font-size: 1rem; }
+
+.examples {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .4rem;
+}
+
+.examples button {
+	padding: .35rem .6rem;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: #1b2028;
+	color: var(--text);
+	font-family: var(--mono);
+	font-size: .8rem;
+	cursor: pointer;
+	transition: background .15s, border-color .15s;
+}
+
+.examples button:hover {
+	border-color: var(--accent);
+	background: #232a33;
+}
+
+.examples button:focus-visible,
+.actions button:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+}
+
+.actions button {
+	flex: 1 1 7rem;
+	padding: .5rem .9rem;
+	border: 1px solid var(--border);
+	border-radius: .5rem;
+	background: #1b2028;
+	color: var(--text);
+	font: inherit;
+	font-size: .85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background .15s;
+}
+
+.actions button:hover:not(:disabled) { background: #232a33; }
+
+.actions button:disabled {
+	opacity: .45;
+	cursor: not-allowed;
+}
+
+.history {
+	display: flex;
+	flex-direction: column;
+	gap: .3rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.history:empty::after {
+	content: 'Nothing evaluated yet.';
+	color: var(--muted);
+	font-size: .85rem;
+}
+
+.history button {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	width: 100%;
+	padding: .4rem .6rem;
+	border: 1px solid transparent;
+	border-radius: .5rem;
+	background: none;
+	color: inherit;
+	font-family: var(--mono);
+	font-size: .82rem;
+	text-align: left;
+	cursor: pointer;
+}
+
+.history button:hover { background: #1b2028; }
+
+.history .history__value {
+	flex: 0 0 auto;
+	color: var(--accent);
+}
+
+.history .history__expression {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--muted);
+}
+
+.section-title {
+	margin: 0;
+	color: var(--muted);
+	font-size: .75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .08em;
+}
+
+footer {
+	max-width: 40rem;
+	margin-top: auto;
+	padding-top: 1rem;
+	border-top: 1px solid var(--border);
+	color: var(--muted);
+	font-size: .78rem;
+	line-height: 1.9;
+	text-align: center;
+}
+
+footer a { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+	button { transition: none; }
+}
+	</style>
+</head>
+<body>
+	<main>
+		<header>
+			<h1>Calculator</h1>
+			<p>A mathematics expressions evaluator, running entirely in your browser.</p>
+		</header>
+
+		<div class="panel">
+			<label for="expression">
+				<span>Expression</span>
+				<textarea id="expression" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="2 + 2 * 2">2 + 2 * 2</textarea>
+			</label>
+			<p class="hint">
+				Several statements separated by <code>;</code> are evaluated in order,
+				<code>#</code> starts a comment, and <code>a = 3</code> defines a variable.
+			</p>
+		</div>
+
+		<div class="result" id="result">
+			<p class="result__label">Result</p>
+			<div class="result__lines" id="lines" role="status" aria-live="polite">
+				<p class="result__line">4</p>
+			</div>
+		</div>
+
+		<div class="panel">
+			<p class="section-title">Try</p>
+			<div class="examples" id="examples"></div>
+			<div class="actions">
+				<button id="copy" type="button">Copy result</button>
+				<button id="clear" type="button">Clear</button>
+			</div>
+		</div>
+
+		<div class="panel">
+			<p class="section-title">History</p>
+			<ul class="history" id="history"></ul>
+		</div>
+	</main>
+
+	<footer>
+		<p>
+			Evaluated with <a href="https://github.com/persian-calendar/calculator">persian-calendar/calculator</a>,
+			compiled from Kotlin to JavaScript and to WebAssembly. Pick either bundle from the
+			<a href="https://github.com/persian-calendar/calculator/tree/main/web">web module</a>.
+		</p>
+	</footer>
+
+	<script src="main.js"></script>
+	<script src="web.js"></script>
+	<script>
+		// if ('serviceWorker' in navigator &&
+		// 	location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+		// 	navigator.serviceWorker.register('sw.js');
+		// }
+	</script>
+</body>
+</html>

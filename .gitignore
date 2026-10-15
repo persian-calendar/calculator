@@ -6,3 +6,5 @@ kotlin-js-store/
 /.kotlin/
 local.properties
 .DS_Store
+web/build
+web/src/webMain/resources/icons/*.png
