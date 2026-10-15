@@ -75,7 +75,7 @@
 			copyButton.disabled = isError || linesToShow.length === 0;
 		}
 
-		function evaluate() {
+		function onEvaluate() {
 			var expression = expressionInput.value;
 			/* eval returns one line per statement and '' when there is nothing to show,
 			   so only an expression with something in it is worth remembering. */
@@ -140,7 +140,7 @@
 		var pending = null;
 		function update() {
 			if (pending) clearTimeout(pending);
-			pending = setTimeout(evaluate, DEBOUNCE_MILLIS);
+			pending = setTimeout(onEvaluate, DEBOUNCE_MILLIS);
 		}
 
 		expressionInput.addEventListener('input', update);
@@ -149,7 +149,7 @@
 			if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey)) return;
 			event.preventDefault();
 			if (pending) clearTimeout(pending);
-			evaluate();
+			onEvaluate();
 		});
 
 		EXAMPLES.forEach(function (example) {
@@ -180,11 +180,11 @@
 			expressionInput.value = '';
 			history = [];
 			renderHistory();
-			evaluate();
+			onEvaluate();
 			expressionInput.focus();
 		});
 
-		evaluate();
+		onEvaluate();
 	}
 
 	window.calculatorReady = start;
