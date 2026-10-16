@@ -27,7 +27,10 @@ internal sealed interface Value {
                 // and anything below -2^31 as -2147483648. Numbers that big go through the
                 // usual double formatting instead of being reported as a number they are not.
                 value == truncate(value) && value in intRange -> value.toInt().toString()
-                else -> value.toString()
+                // Kotlin/JS writes a whole number as "4294967296" and Kotlin/Wasm as
+                // "4294967296.0", so a trailing ".0" - which only a number with no fraction
+                // can have here - is dropped to keep the two alike.
+                else -> value.toString().removeSuffix(".0")
             }
         }
 
@@ -41,7 +44,9 @@ internal sealed interface Value {
         fun detailedFormat(): String {
             if (unit != "s") return toString()
             return timeUnits.toList().fold("" to value) { (result, reminder), unit ->
-                result + floor(reminder / unit.second).toInt() + unit.first + " " to
+                // Through formatNumber rather than toInt(), which saturates: a billion days
+                // used to come out as 2147483647 d.
+                result + formatNumber(floor(reminder / unit.second)) + unit.first + " " to
                         reminder % unit.second
             }.first.trim() + "\n" + timeUnits.map { "${formatNumber(value / it.value)} ${it.key}" }
                 .joinToString("\n")

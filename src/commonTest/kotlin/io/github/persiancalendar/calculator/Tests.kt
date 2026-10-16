@@ -305,6 +305,10 @@ class Tests {
         assertNotEquals("2147483647", eval("2 ^ 2 ^ 5"))
         assertNotEquals("-2147483648", eval("-99999999999999"))
         assertNotEquals("2147483647", eval("2 ^ 62"))
+
+        // The same saturation sat in the time breakdown, where the day count is what grows.
+        val days = eval("1000000000000000 s").lines()[1].substringBefore(" d").toDouble()
+        assertEquals(1.0E15 / 86400, days, 1.0, "the days of 10 ^ 15 seconds")
     }
 
     @Test

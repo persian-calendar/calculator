@@ -23,3 +23,8 @@ dependencies {
 ```
  
 For other build tools support have a look at [this](https://jitpack.io/#persian-calendar/calculator).
+
+# Web demo
+
+There is a small demo of this library in the [web](web) module, which evaluates to JavaScript
+and to WebAssembly and shows the result in the browser as it is typed.
