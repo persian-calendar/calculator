@@ -296,11 +296,11 @@ class Tests {
         // 2^31 printed as 2147483647 and anything below -2^31 as -2147483648. How the digits
         // of a large double are written differs between the platforms, so the value is
         // asserted as a number, and the saturated forms are asserted not to appear at all.
-        assertEquals(4.294967296E9, eval("2 ^ 2 ^ 5").toDouble(), "2 ^ 2 ^ 5")
-        assertEquals(1.0E14, eval("99999999999999").toDouble(), "99999999999999")
-        assertEquals(-1.0E14, eval("-99999999999999").toDouble(), "-99999999999999")
-        assertEquals(1.0E12, eval("10 ^ 12").toDouble(), "10 ^ 12")
-        assertEquals(1.099511627776E12, eval("2 ^ 40").toDouble(), "2 ^ 40")
+        assertEquals(4294967296.0, eval("2 ^ 2 ^ 5").toDouble(), "2 ^ 2 ^ 5")
+        assertEquals(99999999999999.0, eval("99999999999999").toDouble(), "99999999999999")
+        assertEquals(-99999999999999.0, eval("-99999999999999").toDouble(), "-99999999999999")
+        assertEquals(1000000000000.0, eval("10 ^ 12").toDouble(), "10 ^ 12")
+        assertEquals(1099511627776.0, eval("2 ^ 40").toDouble(), "2 ^ 40")
 
         assertNotEquals("2147483647", eval("2 ^ 2 ^ 5"))
         assertNotEquals("-2147483648", eval("-99999999999999"))
