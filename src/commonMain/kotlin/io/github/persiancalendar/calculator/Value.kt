@@ -18,11 +18,15 @@ internal sealed interface Value {
 
     data class Number(val value: Double, val unit: String? = null) : Value {
         private fun formatNumber(value: Double): String {
-            return when (value) {
-                Double.POSITIVE_INFINITY -> "Infinity"
-                Double.NEGATIVE_INFINITY -> "-Infinity"
-                Double.NaN -> "NaN"
-                truncate(value) -> value.toInt().toString()
+            return when {
+                value == Double.POSITIVE_INFINITY -> "Infinity"
+                value == Double.NEGATIVE_INFINITY -> "-Infinity"
+                value.isNaN() -> "NaN"
+                // A whole number prints without a fraction, but only where an Int can hold
+                // it: toInt() saturates, so anything past 2^31 used to print as 2147483647
+                // and anything below -2^31 as -2147483648. Numbers that big go through the
+                // usual double formatting instead of being reported as a number they are not.
+                value == truncate(value) && value in intRange -> value.toInt().toString()
                 else -> value.toString()
             }
         }
@@ -382,5 +386,8 @@ internal sealed interface Value {
 
     companion object {
         private val timeUnits = mapOf("d" to 86400, "h" to 3600, "m" to 60, "s" to 1)
+
+        /** The doubles an Int can still hold exactly, which is what [Number.formatNumber] prints as digits. */
+        private val intRange = Int.MIN_VALUE.toDouble()..Int.MAX_VALUE.toDouble()
     }
 }

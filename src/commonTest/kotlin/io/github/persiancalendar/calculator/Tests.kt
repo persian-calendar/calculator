@@ -4,6 +4,7 @@ import kotlin.math.ln
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertNotEquals
 
 class Tests {
     @Test
@@ -287,6 +288,23 @@ class Tests {
             "5+ 5 5 6 +  7",
             "7 / 5 * ((2 + 2) / (((5 -7) + 2) * 2)",
         ).forEach { assertFails { eval(it) } }
+    }
+
+    @Test
+    fun `test numbers too big for an int`() {
+        // Formatting a whole number went through toInt(), which saturates, so anything past
+        // 2^31 printed as 2147483647 and anything below -2^31 as -2147483648. How the digits
+        // of a large double are written differs between the platforms, so the value is
+        // asserted as a number, and the saturated forms are asserted not to appear at all.
+        assertEquals(4.294967296E9, eval("2 ^ 2 ^ 5").toDouble(), "2 ^ 2 ^ 5")
+        assertEquals(1.0E14, eval("99999999999999").toDouble(), "99999999999999")
+        assertEquals(-1.0E14, eval("-99999999999999").toDouble(), "-99999999999999")
+        assertEquals(1.0E12, eval("10 ^ 12").toDouble(), "10 ^ 12")
+        assertEquals(1.099511627776E12, eval("2 ^ 40").toDouble(), "2 ^ 40")
+
+        assertNotEquals("2147483647", eval("2 ^ 2 ^ 5"))
+        assertNotEquals("-2147483648", eval("-99999999999999"))
+        assertNotEquals("2147483647", eval("2 ^ 62"))
     }
 
     @Test
