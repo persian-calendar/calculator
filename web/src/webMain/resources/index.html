@@ -6,22 +6,45 @@
 	<title>Calculator</title>
 	<meta name="description" content="Evaluate mathematics expressions in the browser, with the persian-calendar/calculator library compiled to JavaScript and WebAssembly.">
 	<link rel="manifest" href="manifest.webmanifest">
-	<meta name="theme-color" content="#0e1116">
+	<meta name="theme-color" content="#f4f7f9" media="(prefers-color-scheme: light)">
+	<meta name="theme-color" content="#0e1116" media="(prefers-color-scheme: dark)">
 	<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 	<link rel="icon" type="image/png" href="icons/icon-192.png">
 	<link rel="apple-touch-icon" href="icons/icon-192.png">
 	<style>
 :root {
-	--bg: #0e1116;
-	--surface: #161a21;
-	--border: #2a3038;
-	--text: #e7ebf0;
-	--muted: #8a93a0;
-	--accent: #7cc4a0;
-	--accent-ink: #06140d;
-	--danger: #ff7b72;
+	/* Light, following the system. */
+	--bg: #f4f7f9;
+	--surface: #ffffff;
+	--border: #d7dee6;
+	--text: #16202a;
+	--muted: #5b6673;
+	--accent: #0f7a56;
+	--accent-ink: #ffffff;
+	--danger: #b42318;
+	--control: #eef2f6;
+	--control-hover: #e2e8ef;
+	--field: #ffffff;
+	--glow: #e4f3ea;
 	--mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
-	color-scheme: dark;
+	color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #0e1116;
+		--surface: #161a21;
+		--border: #2a3038;
+		--text: #e7ebf0;
+		--muted: #8a93a0;
+		--accent: #7cc4a0;
+		--accent-ink: #06140d;
+		--danger: #ff7b72;
+		--control: #1b2028;
+		--control-hover: #232a33;
+		--field: #0e1116;
+		--glow: #182a22;
+	}
 }
 
 * { box-sizing: border-box; }
@@ -35,7 +58,7 @@ body {
 	gap: 1.25rem;
 	min-height: 100vh;
 	background:
-		radial-gradient(55rem 34rem at 50% -12%, #182a22 0%, transparent 62%),
+		radial-gradient(55rem 34rem at 50% -12%, var(--glow) 0%, transparent 62%),
 		var(--bg);
 	color: var(--text);
 	font: 16px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif;
@@ -89,7 +112,7 @@ textarea {
 	padding: .7rem .8rem;
 	border: 1px solid var(--border);
 	border-radius: .6rem;
-	background: #0e1116;
+	background: var(--field);
 	color: var(--text);
 	font-family: var(--mono);
 	font-size: 1rem;
@@ -165,7 +188,7 @@ textarea:focus-visible {
 	padding: .35rem .6rem;
 	border: 1px solid var(--border);
 	border-radius: 999px;
-	background: #1b2028;
+	background: var(--control);
 	color: var(--text);
 	font-family: var(--mono);
 	font-size: .8rem;
@@ -175,7 +198,7 @@ textarea:focus-visible {
 
 .examples button:hover {
 	border-color: var(--accent);
-	background: #232a33;
+	background: var(--control-hover);
 }
 
 .examples button:focus-visible,
@@ -195,7 +218,7 @@ textarea:focus-visible {
 	padding: .5rem .9rem;
 	border: 1px solid var(--border);
 	border-radius: .5rem;
-	background: #1b2028;
+	background: var(--control);
 	color: var(--text);
 	font: inherit;
 	font-size: .85rem;
@@ -204,7 +227,7 @@ textarea:focus-visible {
 	transition: background .15s;
 }
 
-.actions button:hover:not(:disabled) { background: #232a33; }
+.actions button:hover:not(:disabled) { background: var(--control-hover); }
 
 .actions button:disabled {
 	opacity: .45;
@@ -242,7 +265,7 @@ textarea:focus-visible {
 	cursor: pointer;
 }
 
-.history button:hover { background: #1b2028; }
+.history button:hover { background: var(--control); }
 
 .history .history__value {
 	flex: 0 0 auto;
